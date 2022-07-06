@@ -1,0 +1,2 @@
+"github.com/pigfall/gosdk"
+"github.com/pigfall/curdboy/curdboyc"
