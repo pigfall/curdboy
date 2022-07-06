@@ -1,0 +1,190 @@
+package tpls
+
+const CURD_NODE = `// {{.GlobalGraph.GeneratedPrelude}}
+
+package {{.GlobalGraph.GeneratedPkgName}}
+
+import(
+	{{ range .Imports }}
+	"{{. -}}"
+	{{ end }}
+	"fmt"
+	"strings"
+)
+
+{{ $entPkgName := .GlobalGraph.EntPkgName}}
+{{ $nodeName := .TargetNode.Name}}
+{{ $filterPkgName := "filter"}}
+{{ $entPredicatePkgName := "predicate" }}
+{{ $nodePredicatePkgName := .EntNodePredicatePkgName }}
+
+func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Generated_QueryRequestStructName}},entCli *{{$entPkgName}}.Client)([]*{{$entPkgName}}.{{$nodeName}},error ){
+	var pred {{$entPredicatePkgName}}.{{$nodeName}}
+	if len(req.Filter) > 0{
+		filterExpr,err := {{$filterPkgName}}.ParseFilter(req.Filter)
+		if err != nil{
+			return nil,err
+		}
+		pred,err = To{{$nodeName}}Predicate(filterExpr)
+		if err != nil{
+			return nil,err
+		}
+	}
+	query := entCli.{{$nodeName}}.Query().Limit(req.PageSize).Offset(req.PageIndex * req.PageSize)
+	if pred != nil{
+		query = query.Where(pred)
+	}
+
+	return query.All(ctx)
+}
+
+func To{{$nodeName}}Predicate(filterExpr {{$filterPkgName}}.Expr)({{$entPredicatePkgName}}.{{$nodeName}},error){
+	panic("TODO")
+}
+
+{{$filterVisitorName := (printf "FilterVisitor%s" $nodeName) }}
+
+type {{$filterVisitorName}} struct{}
+
+func (this *{{$filterVisitorName}}) predicateFromVisitorResult(v interface{})({{$entPredicatePkgName}}.{{$nodeName}}){
+	return v.({{$entPredicatePkgName}}.{{$nodeName}})
+}
+
+func(this *{{$filterVisitorName}})	VisitBinaryLogicalExpr(expr *{{$filterPkgName}}.BinaryLogicalExpr)(interface{},error){
+	var logicalOperator = expr.Op
+
+	left,err := expr.Left.Accept(this)
+	if err != nil{
+		return nil,err
+	}
+	right,err := expr.Right.Accept(this)
+	if err != nil{
+		return  nil,err
+	}
+
+	leftPred :=  this.predicateFromVisitorResult(left)
+	rightPred :=  this.predicateFromVisitorResult(right)
+
+	switch logicalOperator.Tpe{
+		case {{$filterPkgName}}.TokenType_KW_And:
+		return {{$nodePredicatePkgName}}.And(
+			leftPred,
+			rightPred,
+		), nil
+		case {{$filterPkgName}}.TokenType_KW_Or:
+		return {{$nodePredicatePkgName}}.Or(
+			leftPred,
+			rightPred,
+		), nil
+
+	default:
+		return nil,fmt.Errorf("unexptect logical operator %s",expr.Op.Literal)
+	}
+}
+
+
+{{- define "generatePredicate" }}
+				{{- $field := .Field -}}
+				{{- $op := .Op -}}
+				{{- $nodeName := .NodeName}}
+				{{- $nodePredicatePkgName := .NodePredicatePkgName}}
+				{{- if eq $field.Type.Type.String "string"  -}}
+					if expr.Right.IsNumber(){
+						return  nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect string but get number")
+					}
+					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(expr.Right.GetStringValue()),nil
+				{{- else if  eq $field.Type.Type.String "int" -}}
+					if !expr.Right.IsNumber(){
+						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
+					}
+					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(int(expr.Right.GetNumberValue())),nil
+				{{- else if eq $field.Type.Type.String "int32" -}}
+					if !expr.Right.IsNumber(){
+						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
+					}
+					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(int32(expr.Right.GetNumberValue())),nil
+					
+				{{- else if eq $field.Type.Type.String "int64" -}}
+					if !expr.Right.IsNumber(){
+						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
+					}
+					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(int64(expr.Right.GetNumberValue())),nil
+
+				{{- else if eq $field.Type.Type.String "float" -}}
+					if !expr.Right.IsNumber(){
+						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
+					}
+					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(float(expr.Right.GetNumberValue())),nil
+
+				{{- else if eq $field.Type.Type.String "float32" -}}
+					if !expr.Right.IsNumber(){
+						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
+					}
+					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(float32(expr.Right.GetNumberValue())),nil
+
+				{{- else if eq $field.Type.Type.String "float64" -}}
+					if !expr.Right.IsNumber(){
+						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
+					}
+					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(float64(expr.Right.GetNumberValue())),nil
+				{{- else -}}
+					Unexpected node.Field.Type {{$field.Type.Type.String}}
+				{{- end }}
+{{- end }}
+
+
+func(this *{{$filterVisitorName}})	VisitComparisionExpr(expr *{{$filterPkgName}}.ComparisionExpr)(interface{},error){
+	paths := strings.Split(expr.Left.GetStringValue(),".")
+	if len(paths) == 1{
+		var field = paths[0]
+		switch field {
+		{{ range .TargetNode.AllFldsExlucdePK}}
+		{{ $field := . }}
+		case "{{$field.Name}}":
+			switch expr.Op.Tpe {
+				case {{$filterPkgName}}.TokenType_KW_Eq:
+					{{ template "generatePredicate" (buildGenPredicateParam $field "EQ")}}
+				case {{$filterPkgName}}.TokenType_KW_Ne:
+					{{ template "generatePredicate" (buildGenPredicateParam $field "NEQ")}}
+				case {{$filterPkgName}}.TokenType_KW_Lt:
+					{{ template "generatePredicate" (buildGenPredicateParam $field "LT")}}
+				case {{$filterPkgName}}.TokenType_KW_Le:
+					{{ template "generatePredicate" (buildGenPredicateParam $field "LTE")}}
+				case {{$filterPkgName}}.TokenType_KW_Gt:
+					{{ template "generatePredicate" (buildGenPredicateParam $field "GT")}}
+				case {{$filterPkgName}}.TokenType_KW_Ge:
+					{{ template "generatePredicate" (buildGenPredicateParam $field "GTE")}}
+				case {{$filterPkgName}}.TokenType_KW_Like:
+					{{- if eq $field.Type.Type.String "string" -}}
+					{{ template "generatePredicate" (buildGenPredicateParam $field "Contains")}}
+					{{- else -}}
+					return nil,fmt.Errorf("field {{$field.StructField}} of node {{$nodeName}} is not string type, cannot use like operator")
+					{{- end }}
+				default: 
+					return nil, fmt.Errorf("unexptected comparision operator %s",expr.Op.Literal)
+			}
+		{{end}}
+		default:
+			return nil, fmt.Errorf("undefined field < %s > for node < %s >",field,"{{$nodeName}}")
+		}
+	}else{
+		panic("TODO")
+	}
+}
+
+
+func(this *{{$filterVisitorName}})	VisitUnaryExpr(expr *{{$filterPkgName}}.UnaryExpr)(interface{},error){
+	var operator = expr.Op
+	result,err := expr.Expr.Accept(this)
+	if err != nil{
+		return nil, err
+	}
+	switch operator.Tpe{
+		case {{$filterPkgName}}.TokenType_KW_Not:
+			return  user.Not(this.predicateFromVisitorResult(result)),nil
+		default:
+			return nil, fmt.Errorf("unexptect unary operator %s",operator.Literal)
+	}
+}
+
+`
