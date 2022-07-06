@@ -8,12 +8,12 @@ import(
 
 
 func Fatal(args ...any){
-	output.ErrWithRedColor(args...)
+	output.Err(args...)
 	os.Exit(1)
 }
 
 func Fatalf(format string,args ...any){
-	output.ErrfWithRedColor(format,args...)
+	output.Errf(format,args...)
 	os.Exit(1)
 }
 

@@ -1,2 +1,6 @@
 "github.com/pigfall/gosdk"
 "github.com/pigfall/curdboy/curdboyc"
+"github.com/pigfall/curdboy/curdboyc/tpls"
+"github.com/pigfall/curdboy/pkgs/filter"
+"github.com/pigfall/ent_utils"
+"entgo.io/ent/entc/gen"
