@@ -4,7 +4,6 @@ import(
 
 "entgo.io/ent/entc/gen"
 
-"github.com/pigfall/curdboy/curdboyc/tpls"
 tpl "text/template"
 	"strings"
  	ent "github.com/pigfall/ent_utils"
@@ -47,7 +46,7 @@ func (this *CURDNodeGenerator) Generate()error{
 		},
 	}
 
-	tplIns,err := tpl.New("").Funcs(tplFuncs).Parse(tpls.CURD_NODE)
+	tplIns,err := tpl.New("curd_node.tmpl").Funcs(tplFuncs).ParseFS(templates,"tpls/curd_node.tmpl")
 	if err != nil{
 		return fmt.Errorf("Failed to parse template of CURD_NODE: %w",err)
 	}
