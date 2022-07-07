@@ -1,6 +1,7 @@
 package curdboyc
 
 import(
+	"embed"
 	"path"
 	"os"
 	"github.com/fatih/color"
@@ -9,6 +10,9 @@ import(
  
 	"golang.org/x/tools/go/packages"
 )
+
+//go:embed tpls/*
+var templates embed.FS
 
 
 type CURDGraphGenerator struct{

@@ -6,7 +6,6 @@ import(
 	"fmt"
 	tpl "text/template"
 
-	"github.com/pigfall/curdboy/curdboyc/tpls"
 )
 
 type CURDParamGenerator struct{
@@ -20,7 +19,7 @@ func NewCURDParamGenerator(graph *CURDGraphGenerator)*CURDParamGenerator{
 }
 
 func (this *CURDParamGenerator) Generate()error{
-	tplIns,err := tpl.New("").Parse(tpls.CURD_PARAM)
+	tplIns,err := tpl.New("curd_param.tmpl").ParseFS(templates,"tpls/curd_param.tmpl")
 	if err != nil{
 		return fmt.Errorf("Failed to parse the template of CURD_PARAM: %s",err.Error())
 	}
