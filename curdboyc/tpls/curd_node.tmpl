@@ -36,6 +36,16 @@ func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Genera
 	return query.All(ctx)
 }
 
+{{ define "idType" -}}
+  string
+{{- end -}}
+
+func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]interface{})(id {{ template "idType" }},err error){
+  panic("TODO")
+}
+
+
+
 func To{{$nodeName}}Predicate(filterExpr {{$filterPkgName}}.Expr)({{$entPredicatePkgName}}.{{$nodeName}},error){
 	panic("TODO")
 }

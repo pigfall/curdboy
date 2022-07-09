@@ -63,6 +63,11 @@ func (this *CURDNodeGenerator)GeneratedQueryFuncName() string{
 	return fmt.Sprintf("%sQuery",this.TargetNode.Name())
 }
 
+func (this *CURDNodeGenerator)GenerateCreateFuncName() string{
+	return fmt.Sprintf("%sCreate",this.TargetNode.Name())
+}
+
+
 
 func (this *CURDNodeGenerator) Imports() []string{
 	return []string{
@@ -88,3 +93,4 @@ type GenPredicateparamInTpl struct{
 	NodeName string
 	NodePredicatePkgName string
 }
+
