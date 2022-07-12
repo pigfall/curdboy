@@ -10,11 +10,11 @@ import(
 	"strings"
 )
 
-{{ $entPkgName := .GlobalGraph.EntPkgName}}
-{{ $nodeName := .TargetNode.Name}}
-{{ $filterPkgName := "filter"}}
-{{ $entPredicatePkgName := "predicate" }}
-{{ $nodePredicatePkgName := .EntNodePredicatePkgName }}
+{{ $entPkgName := .GlobalGraph.EntPkgName -}}
+{{ $nodeName := .TargetNode.Name -}}
+{{ $filterPkgName := "filter" -}}
+{{ $entPredicatePkgName := "predicate" -}}
+{{ $nodePredicatePkgName := .EntNodePredicatePkgName -}}
 
 func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Generated_QueryRequestStructName}},entCli *{{$entPkgName}}.Client)([]*{{$entPkgName}}.{{$nodeName}},error ){
 	var pred {{$entPredicatePkgName}}.{{$nodeName}}
