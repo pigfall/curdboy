@@ -36,11 +36,29 @@ func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Genera
 	return query.All(ctx)
 }
 
-{{ define "idType" -}}
-  string
-{{- end -}}
 
-func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]interface{})(id {{ template "idType" }},err error){
+func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]interface{},entCli *{{ $entPkgName }}.Client)(id {{ template "fieldTypeStr" .TargetNode.ID.Type.Type }},outErr error){ 
+  mutation := entCli.{{ $nodeName }}.Create()
+  for k,v := range fieldsData {
+    switch k {
+    {{- range .TargetNode.AllFldsIncludePK -}}
+    {{- $field := . -}}
+    {{ if $field.UserDefined }}
+    case "{{ $field.Name }}":
+      value,err := {{$nodeName}}{{$field.StructField}}ValueFromInterface(v)
+      if err != nil {
+        outErr = fmt.Errorf("field {{$field.Name}} type not match for node {{$nodeName}}: %w",err)
+        return 
+      }
+      mutation.Set{{ $field.StructField }}(value)
+    {{- end -}}
+    {{- end }}
+
+    default:
+      outErr = fmt.Errorf("undefined field %s for node {{$nodeName}}",k)
+      return 
+    }
+  }
   panic("TODO")
 }
 
@@ -195,3 +213,13 @@ func(this *{{$filterVisitorName}})	VisitUnaryExpr(expr *{{$filterPkgName}}.Unary
 	}
 }
 
+{{- define "fieldTypeStr" -}}
+  {{.String}}
+{{- end }}
+
+{{ range .TargetNode.AllFldsIncludePK -}}
+  {{- $field := . }}
+func {{$nodeName}}{{$field.StructField}}ValueFromInterface(v interface{})(value {{ template "fieldTypeStr" $field.Type.Type}},err error){
+  panic("TODO")
+}
+{{ end }}
