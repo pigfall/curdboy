@@ -62,13 +62,16 @@ func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]inte
   panic("TODO")
 }
 
-
+{{$filterVisitorName := (printf "FilterVisitor%s" $nodeName) }}
 
 func To{{$nodeName}}Predicate(filterExpr {{$filterPkgName}}.Expr)({{$entPredicatePkgName}}.{{$nodeName}},error){
-	panic("TODO")
+visitor := &{{$filterVisitorName}}{}
+  v,err := filterExpr.Accept(visitor)
+  if err != nil {
+    return nil,err
+  }
+  return visitor.predicateFromVisitorResult(v),nil
 }
-
-{{$filterVisitorName := (printf "FilterVisitor%s" $nodeName) }}
 
 type {{$filterVisitorName}} struct{}
 
