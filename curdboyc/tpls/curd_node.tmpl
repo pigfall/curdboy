@@ -10,11 +10,11 @@ import(
 	"strings"
 )
 
-{{ $entPkgName := .GlobalGraph.EntPkgName}}
-{{ $nodeName := .TargetNode.Name}}
-{{ $filterPkgName := "filter"}}
-{{ $entPredicatePkgName := "predicate" }}
-{{ $nodePredicatePkgName := .EntNodePredicatePkgName }}
+{{ $entPkgName := .GlobalGraph.EntPkgName -}}
+{{ $nodeName := .TargetNode.Name -}}
+{{ $filterPkgName := "filter" -}}
+{{ $entPredicatePkgName := "predicate" -}}
+{{ $nodePredicatePkgName := .EntNodePredicatePkgName -}}
 
 func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Generated_QueryRequestStructName}},entCli *{{$entPkgName}}.Client)([]*{{$entPkgName}}.{{$nodeName}},error ){
 	var pred {{$entPredicatePkgName}}.{{$nodeName}}
@@ -36,11 +36,42 @@ func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Genera
 	return query.All(ctx)
 }
 
-func To{{$nodeName}}Predicate(filterExpr {{$filterPkgName}}.Expr)({{$entPredicatePkgName}}.{{$nodeName}},error){
-	panic("TODO")
+
+func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]interface{},entCli *{{ $entPkgName }}.Client)(id {{ template "fieldTypeStr" .TargetNode.ID.Type.Type }},outErr error){ 
+  mutation := entCli.{{ $nodeName }}.Create()
+  for k,v := range fieldsData {
+    switch k {
+    {{- range .TargetNode.AllFldsIncludePK -}}
+    {{- $field := . -}}
+    {{ if $field.UserDefined }}
+    case "{{ $field.Name }}":
+      value,err := {{$nodeName}}{{$field.StructField}}ValueFromInterface(v)
+      if err != nil {
+        outErr = fmt.Errorf("field {{$field.Name}} type not match for node {{$nodeName}}: %w",err)
+        return 
+      }
+      mutation.Set{{ $field.StructField }}(value)
+    {{- end -}}
+    {{- end }}
+
+    default:
+      outErr = fmt.Errorf("undefined field %s for node {{$nodeName}}",k)
+      return 
+    }
+  }
+  panic("TODO")
 }
 
 {{$filterVisitorName := (printf "FilterVisitor%s" $nodeName) }}
+
+func To{{$nodeName}}Predicate(filterExpr {{$filterPkgName}}.Expr)({{$entPredicatePkgName}}.{{$nodeName}},error){
+visitor := &{{$filterVisitorName}}{}
+  v,err := filterExpr.Accept(visitor)
+  if err != nil {
+    return nil,err
+  }
+  return visitor.predicateFromVisitorResult(v),nil
+}
 
 type {{$filterVisitorName}} struct{}
 
@@ -185,3 +216,13 @@ func(this *{{$filterVisitorName}})	VisitUnaryExpr(expr *{{$filterPkgName}}.Unary
 	}
 }
 
+{{- define "fieldTypeStr" -}}
+  {{.String}}
+{{- end }}
+
+{{ range .TargetNode.AllFldsIncludePK -}}
+  {{- $field := . }}
+func {{$nodeName}}{{$field.StructField}}ValueFromInterface(v interface{})(value {{ template "fieldTypeStr" $field.Type.Type}},err error){
+  panic("TODO")
+}
+{{ end }}
