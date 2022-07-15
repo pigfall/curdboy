@@ -5,8 +5,8 @@ go 1.18
 require (
 	entgo.io/ent v0.10.1
 	github.com/fatih/color v1.13.0
-	github.com/pigfall/ent_utils v0.0.0-20220705154647-d6e746c3bcf5
-	github.com/pigfall/gosdk v0.0.3
+	github.com/pigfall/ent_utils v0.0.1
+	github.com/pigfall/gosdk v0.0.4
 	github.com/xlab/treeprint v1.1.0
 	golang.org/x/tools v0.1.9-0.20211216111533-8d383106f7e7
 )
@@ -29,6 +29,6 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )
 
-replace github.com/pigfall/gosdk => ../gosdk
+// replace github.com/pigfall/gosdk => ../gosdk
 
-replace github.com/pigfall/ent_utils => ../ent_utils
+// replace github.com/pigfall/ent_utils => ../ent_utils
