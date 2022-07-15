@@ -40,6 +40,7 @@ func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Genera
 func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]interface{},entCli *{{ $entPkgName }}.Client)(id {{ template "fieldTypeStr" .TargetNode.ID.Type.Type }},outErr error){ 
   mutation := entCli.{{ $nodeName }}.Create()
   for k,v := range fieldsData {
+    _ = v
     switch k {
     {{- range .TargetNode.AllFldsIncludePK -}}
     {{- $field := . -}}
@@ -59,7 +60,12 @@ func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]inte
       return 
     }
   }
-  panic("TODO")
+  record,err := mutation.Save(ctx)
+  if err != nil {
+    outErr = err
+    return
+  }
+  return record.{{.TargetNode.ID.StructField}},nil
 }
 
 {{$filterVisitorName := (printf "FilterVisitor%s" $nodeName) }}

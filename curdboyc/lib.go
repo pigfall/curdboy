@@ -22,15 +22,20 @@ type CURDGraphGenerator struct{
 	CURDBoyModuelPath string
 }
 
-func NewCURDGraphGenerator (config *Config)*CURDGraphGenerator{
-	return &CURDGraphGenerator{
+func LoadCURDGraphGenerator (config *Config)(*CURDGraphGenerator, error){
+	r := &CURDGraphGenerator{
 		config:config,
 		CURDBoyModuelPath: "github.com/pigfall/curdboy",// TODO query by program
 	}
+	err := r.init()
+	if err != nil {
+		return nil, err
+	}
+
+	return r,nil
 }
 
-// top generate function to generate curdboy core code
-func (this *CURDGraphGenerator) Generate()error{
+func (this *CURDGraphGenerator) init() error {
 	// { load ent graph
 	graph,err := ent.LoadGraph(this.config.entSchemaDirPath)
 	if err != nil {
@@ -63,6 +68,17 @@ func (this *CURDGraphGenerator) Generate()error{
 		return fmt.Errorf("Failed to mkdir for target path %s",this.TargetDirPath())
 	}
 
+	return nil
+}
+
+
+// top generate function to generate curdboy core code
+func (this *CURDGraphGenerator) Generate() error{
+	err := os.MkdirAll(this.TargetDirPath(),os.ModePerm)
+	if err != nil{
+		return fmt.Errorf("Failed to mkdir for target path %s",this.TargetDirPath())
+	}
+
 	// { generate curd param
 	err = NewCURDParamGenerator(this).Generate()
 	if err != nil{
@@ -73,7 +89,7 @@ func (this *CURDGraphGenerator) Generate()error{
 	// }
 
 	// { generate curd for each node
-	for _,node := range graph.GetNodes(){
+	for _,node := range this.Graph.GetNodes(){
 		err := NewCURDNodeGenerator(node,this).Generate()
 		if err != nil{
 			return err
@@ -109,6 +125,10 @@ func (this *CURDGraphGenerator) EntPkgName() string {
 // eg: <project>/ent/ent_generated
 func (this *CURDGraphGenerator) EntPkgPath() string{
 	return path.Join(this.Module.Path,this.config.entTargetDirPath)
+}
+
+func (this *CURDGraphGenerator) Generated_PkgPath() string{
+	return path.Join(this.Module.Path,this.TargetDirPath())
 }
 
 // 
