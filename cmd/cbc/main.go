@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"github.com/pigfall/gosdk/flags"
 	"github.com/pigfall/curdboy/pkgs/log"
 	cbc "github.com/pigfall/curdboy/curdboyc"
@@ -22,8 +23,15 @@ func main() {
 	}
 
 	cfg := cbc.NewConfig(schemaDirPathFlag.ValueAfterParsed,targetDirPath.ValueAfterParsed,entTargetDirPath.ValueAfterParsed)
-	err = cbc.NewCURDGraphGenerator(cfg).Generate()
+	generator,err := cbc.LoadCURDGraphGenerator(cfg)
 	if err != nil{
 		log.Fatalf("generate curd graph failed: %v",err)
+		os.Exit(1)
 	}
+	err  = generator.Generate()
+	if err != nil {
+		log.Fatalf("generate curd graph failed: %v",err)
+		os.Exit(1)
+	}
+
 }
