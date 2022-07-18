@@ -17,28 +17,7 @@ import(
 {{ $nodePredicatePkgName := .EntNodePredicatePkgName -}}
 {{ $entClientType := printf "*%s.%s" $entPkgName "Client" }}
 
-func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Generated_QueryRequestStructName}},entCli {{$entClientType}})([]*{{$entPkgName}}.{{$nodeName}},error ){
-	var pred {{$entPredicatePkgName}}.{{$nodeName}}
-	if len(req.Filter) > 0{
-		filterExpr,err := {{$filterPkgName}}.ParseFilter(req.Filter)
-		if err != nil{
-			return nil,err
-		}
-		pred,err = To{{$nodeName}}Predicate(filterExpr)
-		if err != nil{
-			return nil,err
-		}
-	}
-	query := entCli.{{$nodeName}}.Query().Limit(req.PageSize).Offset(req.PageIndex * req.PageSize)
-	if pred != nil{
-		query = query.Where(pred)
-	}
-
-	return query.All(ctx)
-}
-
-
-func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]interface{},entCli *{{ $entPkgName }}.Client)(id {{ template "fieldTypeStr" .TargetNode.ID.Type.Type }},outErr error){ 
+func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]interface{},entCli *{{ $entPkgName }}.Client)(id {{ template "fieldTypeStr" .TargetNode.ID.Type.Type }},outErr error){
   mutation := entCli.{{ $nodeName }}.Create()
   for k,v := range fieldsData {
     _ = v
@@ -72,13 +51,48 @@ func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]inte
   return record.{{.TargetNode.ID.StructField}},nil
 }
 
-func {{.GeneratedCountFuncName}} (ctx context.Context,entCli {{$entClientType}},pred {{$entPredicatePkgName}}.{{$nodeName}})(int,error){
+func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Generated_QueryRequestStructName}},entCli {{$entClientType}})([]*{{$entPkgName}}.{{$nodeName}},error ){
+	var pred {{$entPredicatePkgName}}.{{$nodeName}}
+	if len(req.Filter) > 0{
+    var err error
+    pred,err = ParseFilterTo{{$nodeName}}Predicate(req.Filter)
+		if err != nil{
+			return nil,err
+		}
+	}
+	query := entCli.{{$nodeName}}.Query().Limit(req.PageSize).Offset(req.PageIndex * req.PageSize)
+	if pred != nil{
+		query = query.Where(pred)
+	}
+
+	return query.All(ctx)
+}
+
+func {{.GeneratedCountFuncName}} (ctx context.Context,entCli {{$entClientType}},filter string)(int,error){
   query := entCli.{{$nodeName}}.Query()
-  if pred != nil{
+  if len(filter)>0{
+    pred,err := ParseFilterTo{{$nodeName}}Predicate(filter)
+    if err != nil{
+      return 0, err
+    }
     query.Where(pred)
   }
   return query.Count(ctx)
+}
 
+func ParseFilterTo{{$nodeName}}Predicate(filterStr string)({{$entPredicatePkgName}}.{{$nodeName}},error){
+  if len(filterStr) == 0{
+    return nil,fmt.Errorf("length of filter can not be 0")
+  }
+  filterExpr,err := {{$filterPkgName}}.ParseFilter(filterStr)
+  if err != nil{
+    return nil,err
+  }
+  pred,err := To{{$nodeName}}Predicate(filterExpr)
+  if err != nil{
+    return nil,err
+  }
+  return pred,nil
 }
 
 {{$filterVisitorName := (printf "FilterVisitor%s" $nodeName) }}
