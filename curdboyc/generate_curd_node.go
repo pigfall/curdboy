@@ -59,13 +59,20 @@ func (this *CURDNodeGenerator) Generate()error{
 	return nil
 }
 
-func (this *CURDNodeGenerator)GeneratedQueryFuncName() string{
+// { တ generated name
+func (this *CURDNodeGenerator) GeneratedQueryFuncName() string{
 	return fmt.Sprintf("%sQuery",this.TargetNode.Name())
 }
 
-func (this *CURDNodeGenerator)GenerateCreateFuncName() string{
+func (this *CURDNodeGenerator) GenerateCreateFuncName() string{
 	return fmt.Sprintf("%sCreate",this.TargetNode.Name())
 }
+
+func (this *CURDNodeGenerator) GeneratedCountFuncName() string{
+	return fmt.Sprintf("%sCount",this.TargetNode.Name())
+}
+// }
+
 
 
 
