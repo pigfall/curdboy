@@ -15,8 +15,9 @@ import(
 {{ $filterPkgName := "filter" -}}
 {{ $entPredicatePkgName := "predicate" -}}
 {{ $nodePredicatePkgName := .EntNodePredicatePkgName -}}
+{{ $entClientType := printf "*%s.%s" $entPkgName "Client" }}
 
-func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Generated_QueryRequestStructName}},entCli *{{$entPkgName}}.Client)([]*{{$entPkgName}}.{{$nodeName}},error ){
+func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Generated_QueryRequestStructName}},entCli {{$entClientType}})([]*{{$entPkgName}}.{{$nodeName}},error ){
 	var pred {{$entPredicatePkgName}}.{{$nodeName}}
 	if len(req.Filter) > 0{
 		filterExpr,err := {{$filterPkgName}}.ParseFilter(req.Filter)
@@ -52,9 +53,12 @@ func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]inte
         return 
       }
       mutation.Set{{ $field.StructField }}(value)
+    {{- else }}
+      case "{{$field.Name}}":
+      outErr = fmt.Errorf("field {{$field.Name}} is auto generated, do not set value to the field")
+      return
     {{- end -}}
     {{- end }}
-
     default:
       outErr = fmt.Errorf("undefined field %s for node {{$nodeName}}",k)
       return 
@@ -66,6 +70,15 @@ func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]inte
     return
   }
   return record.{{.TargetNode.ID.StructField}},nil
+}
+
+func {{.GeneratedCountFuncName}} (ctx context.Context,entCli {{$entClientType}},pred {{$entPredicatePkgName}}.{{$nodeName}})(int,error){
+  query := entCli.{{$nodeName}}.Query()
+  if pred != nil{
+    query.Where(pred)
+  }
+  return query.Count(ctx)
+
 }
 
 {{$filterVisitorName := (printf "FilterVisitor%s" $nodeName) }}
@@ -229,6 +242,14 @@ func(this *{{$filterVisitorName}})	VisitUnaryExpr(expr *{{$filterPkgName}}.Unary
 {{ range .TargetNode.AllFldsIncludePK -}}
   {{- $field := . }}
 func {{$nodeName}}{{$field.StructField}}ValueFromInterface(v interface{})(value {{ template "fieldTypeStr" $field.Type.Type}},err error){
-  panic("TODO")
+  {{$fieldTypeInGoTypeStr := $field.Type.Type.String }} // TODO sync with fieldTypeStr
+  var ok bool
+  value,ok = v.({{ template "fieldTypeStr" $field.Type.Type}})
+  if !ok {
+    err = fmt.Errorf("The type of The field <$field.Name> of node < {{$nodeName}}> is  {{$fieldTypeInGoTypeStr}}")
+    return
+  }
+
+  return
 }
 {{ end }}
