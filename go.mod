@@ -5,6 +5,7 @@ go 1.18
 require (
 	entgo.io/ent v0.10.1
 	github.com/fatih/color v1.13.0
+	github.com/mitchellh/mapstructure v1.4.3
 	github.com/pigfall/ent_utils v0.0.1
 	github.com/pigfall/gosdk v0.0.4
 	github.com/xlab/treeprint v1.1.0
@@ -19,9 +20,14 @@ require (
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.10.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
+	github.com/olekukonko/tablewriter v0.0.5 // indirect
+	github.com/spf13/cobra v1.3.0 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/zclconf/go-cty v1.8.0 // indirect
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
@@ -31,4 +37,4 @@ require (
 
 // replace github.com/pigfall/gosdk => ../gosdk
 
-// replace github.com/pigfall/ent_utils => ../ent_utils
+replace github.com/pigfall/ent_utils => ../ent_utils

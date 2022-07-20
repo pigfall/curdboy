@@ -11,6 +11,7 @@ import(
 )
 
 {{ $entPkgName := .GlobalGraph.EntPkgName -}}
+{{ $graph := .GlobalGraph -}}
 {{ $nodeName := .TargetNode.Name -}}
 {{ $filterPkgName := "filter" -}}
 {{ $entPredicatePkgName := "predicate" -}}
@@ -229,8 +230,29 @@ func(this *{{$filterVisitorName}})	VisitComparisionExpr(expr *{{$filterPkgName}}
 		default:
 			return nil, fmt.Errorf("undefined field < %s > for node < %s >",field,"{{$nodeName}}")
 		}
-	}else{
-		panic("TODO")
+	}else{ // filter for edge alias
+    edge := paths[0]
+    // check if edge alias exists
+    switch edge{
+    {{ range $graph.GetEdgesAlias $nodeName -}}
+    {{$edgeAlias := .}}
+    case "{{$edgeAlias.Alias}}": // find the matched node by the edge alias
+      p,err := ParseFilterTo{{$edgeAlias.To.Type.Name}}Predicate(
+        fmt.Sprintf(
+          "%s %s %s",
+          strings.Join(paths[1:],"."),
+          expr.Op.Literal,
+          expr.Right.Literal,
+        ),
+      )
+      if err != nil{
+        return nil,err
+      }
+      return {{$nodePredicatePkgName}}.Has{{ ToFirstCharacterUpper $edgeAlias.To.Name }}With(p), nil
+    {{end}}
+    default:
+      return nil,fmt.Errorf("undefined edge alis < %s > for node < {{$nodeName}}>",edge)
+    }
 	}
 }
 
@@ -243,7 +265,7 @@ func(this *{{$filterVisitorName}})	VisitUnaryExpr(expr *{{$filterPkgName}}.Unary
 	}
 	switch operator.Tpe{
 		case {{$filterPkgName}}.TokenType_KW_Not:
-			return  user.Not(this.predicateFromVisitorResult(result)),nil
+    return {{$nodePredicatePkgName}}.Not(this.predicateFromVisitorResult(result)),nil
 		default:
 			return nil, fmt.Errorf("unexptect unary operator %s",operator.Literal)
 	}
