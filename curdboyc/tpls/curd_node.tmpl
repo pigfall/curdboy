@@ -21,6 +21,18 @@ import(
 type {{$nodeName}} struct{
   *{{$entPkgName}}.{{$nodeName}}
   Edges interface{} `json:"-"` // no need the edges from base class
+  {{ range $graph.GetEdgesAlias $nodeName -}}
+  {{- $edgeAlias := . -}}
+  {{- $edge := $edgeAlias.To -}}
+  {{- $edgeNode := $edge.Type }}
+  {{ if or (eq $edge.Rel.Type.String "O2O") (eq $edge.Rel.Type.String "M2O")}}
+  {{ToFirstCharacterUpper $edgeAlias.Alias }} *{{$edgeNode.Name}} `json:"{{$edgeAlias.Alias}},omitempty"`
+  {{ else if or (eq $edge.Rel.Type.String "O2M") (eq $edge.Rel.Type.String "M2M")}}
+  {{ToFirstCharacterUpper $edgeAlias.Alias }} []*{{$edgeNode.Name}} `json:"{{$edgeAlias.Alias}},omitempty"`
+  {{else}}
+    generate error: undefined ent relation type: {{$edge.Rel.Type.String}}
+  {{end }}
+  {{- end }}
 }
 
 func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]interface{},entCli *{{ $entPkgName }}.Client)(id {{ template "fieldTypeStr" .TargetNode.ID.Type.Type }},outErr error){
