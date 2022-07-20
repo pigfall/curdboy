@@ -66,6 +66,10 @@ func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Genera
 		query = query.Where(pred)
 	}
 
+  // { fields selector
+
+  // }
+
 	return query.All(ctx)
 }
 
@@ -289,3 +293,85 @@ func {{$nodeName}}{{$field.StructField}}ValueFromInterface(v interface{})(value 
   return
 }
 {{ end }}
+
+func Parse{{$nodeName}}FieldsSelector(fieldsStr string)(*{{$nodeName}}FieldsSelector,error){
+  fields := strings.Split(fieldsStr,",")
+  selector := &{{$nodeName}}FieldsSelector{
+    Fields: make([]string,0,len(fields)),
+  }
+  for _,f := range fields {
+    err := selector.AddField(f)
+    if err != nil{
+      return nil, err
+    }
+  }
+  return selector,nil
+}
+
+type {{$nodeName}}FieldsSelector struct{
+  SelectAllField bool
+  Fields []string
+  {{- range $graph.GetEdgesAlias $nodeName -}}
+  {{- $edgeAlias := . -}}
+  {{- $edgeNode := $edgeAlias.To.Type}}
+  {{$edgeAlias.Alias}}Edges *{{$edgeNode.Name}}FieldsSelector
+  {{end}}
+}
+
+func (this *{{$nodeName}}FieldsSelector) AddField(field string) error{
+  elems := strings.Split(field,".")
+  if  len(elems) == 1{
+    f := elems[0]
+    if f == "*"{
+      this.SelectAllField = true
+      return nil
+    }
+    this.Fields = append(this.Fields,f)
+  }else{
+      edgeAlias := elems[0]
+      switch edgeAlias{
+        {{range $graph.GetEdgesAlias $nodeName -}}
+          {{$edgeAlias := .}}
+          {{- $edge := $edgeAlias.To -}}
+          {{- $edgeNode := $edge.Type }}
+          case "{{$edgeAlias.Alias}}":
+          f := strings.Join(elems[1:],".")
+          if this.{{$edgeAlias.Alias}}Edges == nil{
+            var err error
+            this.{{$edgeAlias.Alias}}Edges,err = Parse{{$edgeNode.Name}}FieldsSelector(strings.Join(elems[1:],"."))
+            if err != nil{
+              return err
+            }
+          }else{
+            err := this.{{$edgeAlias.Alias}}Edges.AddField(f)
+            if err != nil{
+              return err
+            }
+          }
+        {{end -}}
+        default:
+          return fmt.Errorf("undefined edge alias %s for node {{$nodeName}}",edgeAlias)
+      }
+  }
+  return nil
+}
+
+func (this *{{$nodeName}}FieldsSelector) Select(query *{{$entPkgName}}.{{$nodeName}}Query)error{
+  if !this.SelectAllField{
+    query.Select(this.Fields...)
+  }
+  {{- range $graph.GetEdgesAlias $nodeName -}}
+    {{- $edgeAlias := . -}}
+    {{- $edge := $edgeAlias.To -}}
+    {{- $edgeNode := $edge.Type }}
+    if this.{{$edgeAlias.Alias}}Edges != nil{
+      query.With{{ ToFirstCharacterUpper $edge.Name }}(
+        func(query *{{$entPkgName}}.{{$edgeNode.Name}}Query){
+           this.{{$edgeAlias.Alias}}Edges.Select(query)
+        },
+
+      )
+    }
+  {{end }}
+  return nil
+}

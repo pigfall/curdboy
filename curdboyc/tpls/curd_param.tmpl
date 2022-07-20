@@ -4,6 +4,11 @@ package {{.GlobalGraph.GeneratedPkgName}}
 
 type {{.GlobalGraph.Generated_QueryRequestStructName}} struct{
 	Filter string
+  Fields string
 	PageIndex int
 	PageSize int
+}
+
+type FieldsSelector interface{
+  Evalute(query interface{})(error)
 }
