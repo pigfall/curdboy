@@ -3,9 +3,9 @@
 package {{.GlobalGraph.GeneratedPkgName}}
 
 import(
-	{{ range .Imports }}
+	{{ range .Imports -}}
 	"{{. -}}"
-	{{ end }}
+	{{ end -}}
 	"fmt"
 	"strings"
 )
@@ -16,9 +16,21 @@ import(
 {{ $filterPkgName := "filter" -}}
 {{ $entPredicatePkgName := "predicate" -}}
 {{ $nodePredicatePkgName := .EntNodePredicatePkgName -}}
-{{ $entClientType := printf "*%s.%s" $entPkgName "Client" }}
+{{ $entClientType := printf "*%s.%s" $entPkgName "Client" -}}
+
+/*{
+1တ | struct {{$nodeName}}: as the model in db
+2တ | func (*{{$nodeName}})fromEnt{{$nodeName}}: convert model in ent to curdboy node model
+3တ | func {{.GenerateCreateFuncName}}: func to create node
+4တ | func {{.GeneratedQueryFuncName}}: func to query nodes by pages
+5တ | func {{.GeneratedCountFuncName}}: func to count nodes
+6တ | func ParseFilterTo{{$nodeName}}Predicate: func to parse fitler string to node predicate
+တ7 | functions to convert field value from interface to real type
+တ8 | parse fields expr to field selector object which is used to select the field we want to query
+}*/
 
 // { 
+// 1တ
 type {{$nodeName}} struct {
   *{{$entPkgName}}.{{$nodeName}}
   Edges interface{} `json:"-"` // no need the edges from base class
@@ -36,6 +48,7 @@ type {{$nodeName}} struct {
   {{- end }}
 }
 
+// 2တ
 func (this *{{$nodeName}}) fromEnt{{$nodeName}}(base *{{$entPkgName}}.{{$nodeName}},selector *{{$nodeName}}FieldsSelector)error{
   this.{{$nodeName}} = base
 
@@ -72,6 +85,8 @@ func (this *{{$nodeName}}) fromEnt{{$nodeName}}(base *{{$entPkgName}}.{{$nodeNam
 
 // }
 
+// { CURD
+// 3တ 
 func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]interface{},entCli *{{ $entPkgName }}.Client)(id {{ template "fieldTypeStr" .TargetNode.ID.Type.Type }},outErr error){
   mutation := entCli.{{ $nodeName }}.Create()
   for k,v := range fieldsData {
@@ -106,6 +121,7 @@ func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]inte
   return record.{{.TargetNode.ID.StructField}},nil
 }
 
+// 4တ 
 func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Generated_QueryRequestStructName}},entCli {{$entClientType}})([]*{{$nodeName}},error ){
 	var pred {{$entPredicatePkgName}}.{{$nodeName}}
 	if len(req.Filter) > 0{
@@ -146,6 +162,7 @@ func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Genera
   return nodes,nil
 }
 
+// 5တ 
 func {{.GeneratedCountFuncName}} (ctx context.Context,entCli {{$entClientType}},filter string)(int,error){
   query := entCli.{{$nodeName}}.Query()
   if len(filter)>0{
@@ -158,6 +175,12 @@ func {{.GeneratedCountFuncName}} (ctx context.Context,entCli {{$entClientType}},
   return query.Count(ctx)
 }
 
+// }
+
+
+
+// { Prase filter to node predicate
+// 6တ 
 func ParseFilterTo{{$nodeName}}Predicate(filterStr string)({{$entPredicatePkgName}}.{{$nodeName}},error){
   if len(filterStr) == 0{
     return nil,fmt.Errorf("length of filter can not be 0")
@@ -222,57 +245,6 @@ func(this *{{$filterVisitorName}})	VisitBinaryLogicalExpr(expr *{{$filterPkgName
 	}
 }
 
-
-{{- define "generatePredicate" }}
-				{{- $field := .Field -}}
-				{{- $op := .Op -}}
-				{{- $nodeName := .NodeName}}
-				{{- $nodePredicatePkgName := .NodePredicatePkgName}}
-				{{- if eq $field.Type.Type.String "string"  -}}
-					if expr.Right.IsNumber(){
-						return  nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect string but get number")
-					}
-					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(expr.Right.GetStringValue()),nil
-				{{- else if  eq $field.Type.Type.String "int" -}}
-					if !expr.Right.IsNumber(){
-						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
-					}
-					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(int(expr.Right.GetNumberValue())),nil
-				{{- else if eq $field.Type.Type.String "int32" -}}
-					if !expr.Right.IsNumber(){
-						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
-					}
-					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(int32(expr.Right.GetNumberValue())),nil
-					
-				{{- else if eq $field.Type.Type.String "int64" -}}
-					if !expr.Right.IsNumber(){
-						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
-					}
-					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(int64(expr.Right.GetNumberValue())),nil
-
-				{{- else if eq $field.Type.Type.String "float" -}}
-					if !expr.Right.IsNumber(){
-						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
-					}
-					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(float(expr.Right.GetNumberValue())),nil
-
-				{{- else if eq $field.Type.Type.String "float32" -}}
-					if !expr.Right.IsNumber(){
-						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
-					}
-					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(float32(expr.Right.GetNumberValue())),nil
-
-				{{- else if eq $field.Type.Type.String "float64" -}}
-					if !expr.Right.IsNumber(){
-						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
-					}
-					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(float64(expr.Right.GetNumberValue())),nil
-				{{- else -}}
-					Unexpected node.Field.Type {{$field.Type.Type.String}}
-				{{- end }}
-{{- end }}
-
-
 func(this *{{$filterVisitorName}})	VisitComparisionExpr(expr *{{$filterPkgName}}.ComparisionExpr)(interface{},error){
 	paths := strings.Split(expr.Left.GetStringValue(),".")
 	if len(paths) == 1{
@@ -333,7 +305,6 @@ func(this *{{$filterVisitorName}})	VisitComparisionExpr(expr *{{$filterPkgName}}
 	}
 }
 
-
 func(this *{{$filterVisitorName}})	VisitUnaryExpr(expr *{{$filterPkgName}}.UnaryExpr)(interface{},error){
 	var operator = expr.Op
 	result,err := expr.Expr.Accept(this)
@@ -348,6 +319,63 @@ func(this *{{$filterVisitorName}})	VisitUnaryExpr(expr *{{$filterPkgName}}.Unary
 	}
 }
 
+// }
+
+
+
+// {
+{{- define "generatePredicate" }}
+				{{- $field := .Field -}}
+				{{- $op := .Op -}}
+				{{- $nodeName := .NodeName}}
+				{{- $nodePredicatePkgName := .NodePredicatePkgName}}
+				{{- if eq $field.Type.Type.String "string"  -}}
+					if expr.Right.IsNumber(){
+						return  nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect string but get number")
+					}
+					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(expr.Right.GetStringValue()),nil
+				{{- else if  eq $field.Type.Type.String "int" -}}
+					if !expr.Right.IsNumber(){
+						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
+					}
+					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(int(expr.Right.GetNumberValue())),nil
+				{{- else if eq $field.Type.Type.String "int32" -}}
+					if !expr.Right.IsNumber(){
+						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
+					}
+					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(int32(expr.Right.GetNumberValue())),nil
+					
+				{{- else if eq $field.Type.Type.String "int64" -}}
+					if !expr.Right.IsNumber(){
+						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
+					}
+					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(int64(expr.Right.GetNumberValue())),nil
+
+				{{- else if eq $field.Type.Type.String "float" -}}
+					if !expr.Right.IsNumber(){
+						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
+					}
+					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(float(expr.Right.GetNumberValue())),nil
+
+				{{- else if eq $field.Type.Type.String "float32" -}}
+					if !expr.Right.IsNumber(){
+						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
+					}
+					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(float32(expr.Right.GetNumberValue())),nil
+
+				{{- else if eq $field.Type.Type.String "float64" -}}
+					if !expr.Right.IsNumber(){
+						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
+					}
+					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(float64(expr.Right.GetNumberValue())),nil
+				{{- else -}}
+					Unexpected node.Field.Type {{$field.Type.Type.String}}
+				{{- end }}
+{{- end }}
+
+// }
+
+// { တ7 functions to convert field value from interface to the real type
 {{- define "fieldTypeStr" -}}
   {{.String}}
 {{- end }}
@@ -366,7 +394,10 @@ func {{$nodeName}}{{$field.StructField}}ValueFromInterface(v interface{})(value 
   return
 }
 {{ end }}
+// }
 
+
+// { တ8 parse fields expr to field selector object which is used to select the field we want to query
 func Parse{{$nodeName}}FieldsSelector(fieldsStr string)(*{{$nodeName}}FieldsSelector,error){
   fields := strings.Split(fieldsStr,",")
   selector := &{{$nodeName}}FieldsSelector{
@@ -448,3 +479,5 @@ func (this *{{$nodeName}}FieldsSelector) Select(query *{{$entPkgName}}.{{$nodeNa
   {{end }}
   return nil
 }
+
+// }
