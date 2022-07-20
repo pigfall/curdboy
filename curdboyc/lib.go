@@ -3,6 +3,7 @@ package curdboyc
 import(
 	"embed"
 	"path"
+	//"log"
 	"os"
 	"github.com/fatih/color"
 	"fmt"
@@ -20,7 +21,9 @@ type CURDGraphGenerator struct{
 	Graph *ent.Graph
 	Module  *packages.Module // the user's module
 	CURDBoyModuelPath string
+	EdgesOfNodes map[string]*EdgesOfNode // node name => EdgesOfNode 
 }
+
 
 func LoadCURDGraphGenerator (config *Config)(*CURDGraphGenerator, error){
 	r := &CURDGraphGenerator{
@@ -67,6 +70,14 @@ func (this *CURDGraphGenerator) init() error {
 	if err != nil{
 		return fmt.Errorf("Failed to mkdir for target path %s",this.TargetDirPath())
 	}
+
+	// { 
+	err = this.parseEdgeAlias()
+	if err != nil{
+		return err
+	}
+
+	// }
 
 	return nil
 }
@@ -139,4 +150,75 @@ func (this *CURDGraphGenerator) FilterParserPkgPath() string{
 func (this *CURDGraphGenerator) EntPredicatePkgPath() string{
 	return path.Join(this.EntPkgPath(),"predicate")
 
+}
+
+func (this *CURDGraphGenerator) parseEdgeAlias()error{
+	var edgesOfNodes = make(map[string]*EdgesOfNode)
+	for _,node := range this.Graph.GetNodes(){
+		INNER:
+		for _,edge := range node.Edges {
+			ans,err := GetAnnotation(edge)
+			if err != nil{
+				panic(err)
+			}
+			if ans == nil {
+				continue INNER
+			}
+			for _,an := range ans.List{
+				edgesOfNode := findOrInsertEdgesOfNode(&edgesOfNodes,node)
+
+				if len(an.Left) > 0{
+					edgesOfNode.AddEdgeAlias(an.Left,ent.FromEntEdge(edge))
+				}
+
+				// { add inverse edge alias TODO, must satif
+
+				inverseNode := ent.FromType(edge.Type)
+				edgesOfNode = findOrInsertEdgesOfNode(&edgesOfNodes,inverseNode)
+
+				if len(an.Right) >0 {
+					if len(an.FromName)==0 {
+						panic(fmt.Errorf("TODO with right alias, the from name must speicified"))
+					}
+					// && TODO check schema set the inverse edge
+
+					var matchedEdge *ent.Edge // find edge
+					for _,edge := range inverseNode.Edges{
+						if edge.Name == an.FromName{
+							matchedEdge = ent.FromEntEdge(edge)
+							break
+						}
+					}
+
+					if matchedEdge == nil{
+						// TODO
+						panic(fmt.Errorf("NOT FOUND inverse edge %s from node %s",an.FromName,inverseNode.Name()))
+					}
+
+					edgesOfNode.AddEdgeAlias(an.Right,matchedEdge)
+				}
+
+			}
+			// }
+		}
+	}
+	this.EdgesOfNodes = edgesOfNodes
+	return nil
+}
+
+func (this *CURDGraphGenerator) GetEdgesAlias(nodeName string)[]*EdgeAlias{
+	edgesOfNode := this.EdgesOfNodes[nodeName]
+	if edgesOfNode == nil{ // no edges
+		return nil
+	}
+	return edgesOfNode.Aliases
+}
+
+func findOrInsertEdgesOfNode(edgesOfNodes *map[string]*EdgesOfNode,node *ent.Type)*EdgesOfNode{
+	edgesOfNode := (*edgesOfNodes)[node.Name()]
+	if edgesOfNode == nil{
+		edgesOfNode = NewEdgesOfNode(node)
+		(*edgesOfNodes)[node.Name()] = edgesOfNode
+	}
+	return edgesOfNode
 }

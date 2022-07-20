@@ -44,6 +44,11 @@ func (this *CURDNodeGenerator) Generate()error{
 				NodePredicatePkgName: this.EntNodePredicatePkgName(),
 			}
 		},
+		"ToFirstCharacterUpper": func(input string)string{
+			runes := []rune(input)
+			first := strings.ToUpper(string(runes[0]))
+			return first + string(input[1:])
+		},
 	}
 
 	tplIns,err := tpl.New("curd_node.tmpl").Funcs(tplFuncs).ParseFS(templates,"tpls/curd_node.tmpl")
