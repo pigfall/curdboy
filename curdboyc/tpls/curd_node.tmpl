@@ -18,6 +18,11 @@ import(
 {{ $nodePredicatePkgName := .EntNodePredicatePkgName -}}
 {{ $entClientType := printf "*%s.%s" $entPkgName "Client" }}
 
+type {{$nodeName}} struct{
+  *{{$entPkgName}}.{{$nodeName}}
+  Edges interface{} `json:"-"` // no need the edges from base class
+}
+
 func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]interface{},entCli *{{ $entPkgName }}.Client)(id {{ template "fieldTypeStr" .TargetNode.ID.Type.Type }},outErr error){
   mutation := entCli.{{ $nodeName }}.Create()
   for k,v := range fieldsData {
