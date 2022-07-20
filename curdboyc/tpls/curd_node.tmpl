@@ -18,22 +18,59 @@ import(
 {{ $nodePredicatePkgName := .EntNodePredicatePkgName -}}
 {{ $entClientType := printf "*%s.%s" $entPkgName "Client" }}
 
-type {{$nodeName}} struct{
+// { 
+type {{$nodeName}} struct {
   *{{$entPkgName}}.{{$nodeName}}
   Edges interface{} `json:"-"` // no need the edges from base class
   {{ range $graph.GetEdgesAlias $nodeName -}}
   {{- $edgeAlias := . -}}
   {{- $edge := $edgeAlias.To -}}
-  {{- $edgeNode := $edge.Type }}
-  {{ if or (eq $edge.Rel.Type.String "O2O") (eq $edge.Rel.Type.String "M2O")}}
+  {{- $edgeNode := $edge.Type -}}
+  {{ if or (eq $edge.Rel.Type.String "O2O") (eq $edge.Rel.Type.String "M2O") -}}
   {{ToFirstCharacterUpper $edgeAlias.Alias }} *{{$edgeNode.Name}} `json:"{{$edgeAlias.Alias}},omitempty"`
-  {{ else if or (eq $edge.Rel.Type.String "O2M") (eq $edge.Rel.Type.String "M2M")}}
+  {{ else if or (eq $edge.Rel.Type.String "O2M") (eq $edge.Rel.Type.String "M2M") -}}
   {{ToFirstCharacterUpper $edgeAlias.Alias }} []*{{$edgeNode.Name}} `json:"{{$edgeAlias.Alias}},omitempty"`
-  {{else}}
+  {{else -}}
     generate error: undefined ent relation type: {{$edge.Rel.Type.String}}
-  {{end }}
+  {{- end }}
   {{- end }}
 }
+
+func (this *{{$nodeName}}) fromEnt{{$nodeName}}(base *{{$entPkgName}}.{{$nodeName}},selector *{{$nodeName}}FieldsSelector)error{
+  this.{{$nodeName}} = base
+
+  {{- range $graph.GetEdgesAlias $nodeName -}}
+  {{- $edgeAlias := . -}}
+  {{- $edge := $edgeAlias.To -}}
+  {{- $edgeNode := $edge.Type }}
+  if selector.{{$edgeAlias.Alias}}Edges != nil{
+    {{ if or (eq $edge.Rel.Type.String "O2O") (eq $edge.Rel.Type.String "M2O")}}
+      edgeNode := &{{$edge.Type.Name}}{}
+      err := edgeNode.fromEnt{{$edge.Type.Name}}(base.Edges.{{ToFirstCharacterUpper $edge.Name}},selector.{{$edgeAlias.Alias}}Edges)
+      if err != nil{
+        return err
+      }
+    this.{{ToFirstCharacterUpper $edgeAlias.Alias }} = edgeNode
+    {{ else if or (eq $edge.Rel.Type.String "O2M") (eq $edge.Rel.Type.String "M2M")}}
+      edgeNodes := make([]*{{$edge.Type.Name}},0,len(base.Edges.{{ToFirstCharacterUpper $edge.Name}}))
+      for _,v := range base.Edges.{{ToFirstCharacterUpper $edge.Name}}{
+        edgeNode := &{{$edge.Type.Name}}{}
+        err := edgeNode.fromEnt{{$edge.Type.Name}}(v,selector.{{$edgeAlias.Alias}}Edges)
+        if err != nil{
+          return err
+        }
+        edgeNodes = append(edgeNodes,edgeNode)
+      }
+      this.{{ToFirstCharacterUpper $edgeAlias.Alias }} = edgeNodes
+    {{else}}
+      generate error: undefined ent relation type: {{$edge.Rel.Type.String}}
+    {{end}}
+  }
+  {{end }}
+  return nil
+}
+
+// }
 
 func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]interface{},entCli *{{ $entPkgName }}.Client)(id {{ template "fieldTypeStr" .TargetNode.ID.Type.Type }},outErr error){
   mutation := entCli.{{ $nodeName }}.Create()
@@ -69,7 +106,7 @@ func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]inte
   return record.{{.TargetNode.ID.StructField}},nil
 }
 
-func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Generated_QueryRequestStructName}},entCli {{$entClientType}})([]*{{$entPkgName}}.{{$nodeName}},error ){
+func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Generated_QueryRequestStructName}},entCli {{$entClientType}})([]*{{$nodeName}},error ){
 	var pred {{$entPredicatePkgName}}.{{$nodeName}}
 	if len(req.Filter) > 0{
     var err error
@@ -84,10 +121,29 @@ func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Genera
 	}
 
   // { fields selector
-
+  fldSelector,err := Parse{{$nodeName}}FieldsSelector(req.Fields)
+  if err != nil{
+    return nil,err
+  }
   // }
 
-	return query.All(ctx)
+	records,err :=  query.All(ctx)
+  if err != nil{
+    return nil,err
+  }
+  // { convert to our node struct
+  nodes := make([]*{{$nodeName}},0,len(records))
+  for _,r := range records{
+    node := &{{$nodeName}}{}
+    err := node.fromEnt{{$nodeName}}(r,fldSelector)
+    if err != nil{
+      return nil,err
+    }
+    nodes = append(nodes,node)
+  }
+  // }
+
+  return nodes,nil
 }
 
 func {{.GeneratedCountFuncName}} (ctx context.Context,entCli {{$entClientType}},filter string)(int,error){
