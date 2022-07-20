@@ -165,23 +165,16 @@ func (this *CURDGraphGenerator) parseEdgeAlias()error{
 				continue INNER
 			}
 			for _,an := range ans.List{
-				edgesOfNode := edgesOfNodes[node.Name()]
-				if edgesOfNode == nil{
-					edgesOfNode = NewEdgesOfNode(node)
-					edgesOfNodes[node.Name()] = edgesOfNode
-				}
+				edgesOfNode := findOrInsertEdgesOfNode(&edgesOfNodes,node)
 
 				if len(an.Left) > 0{
 					edgesOfNode.AddEdgeAlias(an.Left,ent.FromEntEdge(edge))
 				}
 
 				// { add inverse edge alias TODO, must satif
+
 				inverseNode := ent.FromType(edge.Type)
-				edgesOfNode = edgesOfNodes[inverseNode.Name()]
-				if edgesOfNode == nil{
-					edgesOfNode = NewEdgesOfNode(inverseNode)
-					edgesOfNodes[inverseNode.Name()] = edgesOfNode
-				}
+				edgesOfNode = findOrInsertEdgesOfNode(&edgesOfNodes,inverseNode)
 
 				if len(an.Right) >0 {
 					if len(an.FromName)==0 {
@@ -219,4 +212,13 @@ func (this *CURDGraphGenerator) GetEdgesAlias(nodeName string)[]*EdgeAlias{
 		return nil
 	}
 	return edgesOfNode.Aliases
+}
+
+func findOrInsertEdgesOfNode(edgesOfNodes *map[string]*EdgesOfNode,node *ent.Type)*EdgesOfNode{
+	edgesOfNode := (*edgesOfNodes)[node.Name()]
+	if edgesOfNode == nil{
+		edgesOfNode = NewEdgesOfNode(node)
+		(*edgesOfNodes)[node.Name()] = edgesOfNode
+	}
+	return edgesOfNode
 }
