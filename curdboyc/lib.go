@@ -115,6 +115,10 @@ func (this *CURDGraphGenerator) Generated_QueryRequestStructName() string{
 	return `QueryRequest`
 }
 
+func (this *CURDGraphGenerator) Generated_UpdateRequestStructName() string{
+	return `UpdateRequest`
+}
+
 // which directory path to save the generated files
 func (this *CURDGraphGenerator) TargetDirPath()string{
 	return this.config.targetDirPath
