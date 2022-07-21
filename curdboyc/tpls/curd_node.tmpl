@@ -213,6 +213,20 @@ func {{.GeneratedUpdateFuncName}} (ctx context.Context,entCli {{$entClientType}}
   _,err := mutation.Save(ctx)
   return err
 }
+
+// 52တ
+func {{.GeneratedDeleteFuncName}} (ctx context.Context,entCli {{$entClientType}},filter string)(error){
+  del := entCli.{{$nodeName}}.Delete()
+  if len(filter) > 0{
+    pred,err := ParseFilterTo{{$nodeName}}Predicate(filter)
+    if err != nil{
+      return err
+    }
+    del.Where(pred)
+  }
+  _,err := del.Exec(ctx)
+  return err
+}
 // }
 
 
