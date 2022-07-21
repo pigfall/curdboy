@@ -76,6 +76,14 @@ func (this *CURDNodeGenerator) GenerateCreateFuncName() string{
 func (this *CURDNodeGenerator) GeneratedCountFuncName() string{
 	return fmt.Sprintf("%sCount",this.TargetNode.Name())
 }
+
+func (this *CURDNodeGenerator) GeneratedUpdateFuncName() string{
+	return fmt.Sprintf("%sUpdate",this.TargetNode.Name())
+}
+
+func (this *CURDNodeGenerator) GeneratedDeleteFuncName() string{
+	return fmt.Sprintf("%sDelete",this.TargetNode.Name())
+}
 // }
 
 

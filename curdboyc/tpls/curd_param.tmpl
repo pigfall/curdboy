@@ -9,6 +9,7 @@ type {{.GlobalGraph.Generated_QueryRequestStructName}} struct{
 	PageSize int
 }
 
-type FieldsSelector interface{
-  Evalute(query interface{})(error)
+type {{.GlobalGraph.Generated_UpdateRequestStructName}} struct{
+  Filter string
+  Data map[string]any
 }

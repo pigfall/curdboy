@@ -18,15 +18,17 @@ import(
 {{ $nodePredicatePkgName := .EntNodePredicatePkgName -}}
 {{ $entClientType := printf "*%s.%s" $entPkgName "Client" -}}
 
-/*{
-1တ | struct {{$nodeName}}: as the model in db
-2တ | func (*{{$nodeName}})fromEnt{{$nodeName}}: convert model in ent to curdboy node model
-3တ | func {{.GenerateCreateFuncName}}: func to create node
-4တ | func {{.GeneratedQueryFuncName}}: func to query nodes by pages
-5တ | func {{.GeneratedCountFuncName}}: func to count nodes
-6တ | func ParseFilterTo{{$nodeName}}Predicate: func to parse fitler string to node predicate
-တ7 | functions to convert field value from interface to real type
-တ8 | parse fields expr to field selector object which is used to select the field we want to query
+/*{ the number is meanning less. I just use it as mark to jump between the code
+1တ   | struct {{$nodeName}}: as the model in db
+2တ   | func (*{{$nodeName}})fromEnt{{$nodeName}}: convert model in ent to curdboy node model
+3တ   | func {{.GenerateCreateFuncName}}: func to create node
+4တ   | func {{.GeneratedQueryFuncName}}: func to query nodes by pages
+5တ   | func {{.GeneratedCountFuncName}}: func to count nodes
+51တ  | func {{.GeneratedUpdateFuncName}}: func to update nodes
+52တ  | func {{.GeneratedDeleteFuncName}}: func to update nodes
+6တ   | func ParseFilterTo{{$nodeName}}Predicate: func to parse fitler string to node predicate
+တ7   | functions to convert field value from interface to real type
+တ8   | parse fields expr to field selector object which is used to select the field we want to query
 }*/
 
 // { 
@@ -175,6 +177,56 @@ func {{.GeneratedCountFuncName}} (ctx context.Context,entCli {{$entClientType}},
   return query.Count(ctx)
 }
 
+// 51တ 
+func {{.GeneratedUpdateFuncName}} (ctx context.Context,entCli {{$entClientType}},req *{{.GlobalGraph.Generated_UpdateRequestStructName}})(error){
+  mutation := entCli.{{$nodeName}}.Update()
+  if len(req.Filter) > 0{
+    pred,err := ParseFilterTo{{$nodeName}}Predicate(req.Filter)
+    if err != nil{
+      return err
+    }
+    mutation.Where(pred)
+  }
+  for field,v := range req.Data{
+    _ = v
+    switch field {
+    {{ range .TargetNode.AllFldsIncludePK -}}
+    {{ $field := . -}}
+    {{ if $field.UserDefined -}}
+    case "{{$field.Name}}":
+    value,err := {{$nodeName}}{{$field.StructField}}ValueFromInterface(v)
+    if err != nil {
+      err = fmt.Errorf("field {{$field.Name}} type not match for node {{$nodeName}}: %w",err)
+      return err
+    }
+    mutation.Set{{ $field.StructField }}(value)
+    {{ else -}}
+    case "{{$field.Name}}":
+    err := fmt.Errorf("field {{$field.Name}} is auto generated, do not set value to the field")
+    return err
+    {{- end}}
+    {{- end}}
+    default:
+      return fmt.Errorf("undefined field < %s > for node < {{$nodeName}} >",field)
+    }
+  }
+  _,err := mutation.Save(ctx)
+  return err
+}
+
+// 52တ
+func {{.GeneratedDeleteFuncName}} (ctx context.Context,entCli {{$entClientType}},filter string)(error){
+  del := entCli.{{$nodeName}}.Delete()
+  if len(filter) > 0{
+    pred,err := ParseFilterTo{{$nodeName}}Predicate(filter)
+    if err != nil{
+      return err
+    }
+    del.Where(pred)
+  }
+  _,err := del.Exec(ctx)
+  return err
+}
 // }
 
 
