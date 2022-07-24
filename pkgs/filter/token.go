@@ -1,16 +1,14 @@
 package filter
 
-
-
 type TokenType int
 
-const(
-	TokenType_LEFT_PARENTH TokenType = iota+1
-	TokenType_RIGHT_PARENTH 
-	TokenType_Number 
+const (
+	TokenType_LEFT_PARENTH TokenType = iota + 1
+	TokenType_RIGHT_PARENTH
+	TokenType_Number
 	TokenType_String
 	TokenType_Identity
-	TokenType_KW_And 
+	TokenType_KW_And
 	TokenType_KW_Or
 	TokenType_KW_Not
 	TokenType_KW_Eq
@@ -22,56 +20,54 @@ const(
 	TokenType_KW_Like
 )
 
-type Token struct{
-	Tpe TokenType
+type Token struct {
+	Tpe     TokenType
 	Literal string
-	Value interface{}
+	Value   interface{}
 }
 
-func (this *Token) GetValue()interface{}{
+func (this *Token) GetValue() interface{} {
 	return this.Value
 }
 
-func (this *Token) IsNumber()bool{
-	return this.Tpe == TokenType_Number 
+func (this *Token) IsNumber() bool {
+	return this.Tpe == TokenType_Number
 }
 
-func (this *Token) GetNumberValue()float64{
+func (this *Token) GetNumberValue() float64 {
 	return this.Value.(float64)
 }
 
-func (this *Token) GetStringValue()string{
+func (this *Token) GetStringValue() string {
 	return this.Value.(string)
 }
 
-
-
-const(
-	KEYWORD_AND = "and"
-	KEYWORD_NOT = "not"
-	KEYWORD_OR = "or"
-	KEYWORD_EQ = "eq"
-	KEYWORD_NE = "ne"
-	KEYWORD_GT = "gt"
-	KEYWORD_GE = "ge"
-	KEYWORD_LT = "lt"
-	KEYWORD_LE= "le"
-	KEYWORD_LIKE= "like"
+const (
+	KEYWORD_AND  = "and"
+	KEYWORD_NOT  = "not"
+	KEYWORD_OR   = "or"
+	KEYWORD_EQ   = "eq"
+	KEYWORD_NE   = "ne"
+	KEYWORD_GT   = "gt"
+	KEYWORD_GE   = "ge"
+	KEYWORD_LT   = "lt"
+	KEYWORD_LE   = "le"
+	KEYWORD_LIKE = "like"
 )
 
-func (this TokenType) String()string{
-	switch this{
-	case TokenType_LEFT_PARENTH :
+func (this TokenType) String() string {
+	switch this {
+	case TokenType_LEFT_PARENTH:
 		return "TokenType_LEFT_PARENTH"
-	case TokenType_RIGHT_PARENTH :
+	case TokenType_RIGHT_PARENTH:
 		return "TokenType_RIGHT_PARENTH"
-	case TokenType_Number :
+	case TokenType_Number:
 		return "TokenType_Number"
 	case TokenType_String:
 		return " TokenType_String"
 	case TokenType_Identity:
 		return "TokenType_Identity"
-	case TokenType_KW_And :
+	case TokenType_KW_And:
 		return "TokenType_KW_And "
 	case TokenType_KW_Or:
 		return " TokenType_KW_Or"

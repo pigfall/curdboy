@@ -16,18 +16,16 @@ func NewParser(tokens []*Token) *Parser {
 }
 
 func (this *Parser) Parse() (Expr, error) {
-	expr,err := this.expression()
-	if err != nil{
-		return nil,err
+	expr, err := this.expression()
+	if err != nil {
+		return nil, err
 	}
 	if !this.isAtEnd() {
-		return nil,fmt.Errorf("unexpect token in pos %+v",this.current)
+		return nil, fmt.Errorf("unexpect token in pos %+v", this.current)
 	}
 
-	return expr,nil
+	return expr, nil
 }
-
-
 
 func (this *Parser) expression() (Expr, error) {
 	return this.binaryLogicalExpression()
@@ -87,20 +85,20 @@ func (this *Parser) primary() (Expr, error) {
 func (this *Parser) expect(tpe TokenType) error {
 	if !this.check(tpe) {
 		//panic("here")
-		var names = make([]string,0,len(this.tokens))
-		for _,tk := range this.tokens{
-			names = append(names,tk.Literal)
+		var names = make([]string, 0, len(this.tokens))
+		for _, tk := range this.tokens {
+			names = append(names, tk.Literal)
 		}
 
-		return fmt.Errorf("expected TokenType %+v in pos %d, token list: %+v", tpe.String(), this.current,names)
+		return fmt.Errorf("expected TokenType %+v in pos %d, token list: %+v", tpe.String(), this.current, names)
 	}
 	return nil
 }
 
-func (this *Parser) formatTks(tks []TokenType)[]string{
-	ret  := make([]string,0,len(tks))
-	for _,v := range tks{
-		ret = append(ret,v.String())
+func (this *Parser) formatTks(tks []TokenType) []string {
+	ret := make([]string, 0, len(tks))
+	for _, v := range tks {
+		ret = append(ret, v.String())
 	}
 
 	return ret
@@ -121,7 +119,7 @@ func (this *Parser) comparision() (Expr, error) {
 	wants = []TokenType{TokenType_String, TokenType_Number}
 	ok = this.match(wants...)
 	if !ok {
-		return nil, fmt.Errorf("expected %+v in pos %d",this.formatTks(wants), this.current)
+		return nil, fmt.Errorf("expected %+v in pos %d", this.formatTks(wants), this.current)
 	}
 	literal := this.prevToken()
 	return NewComparisionExpr(identifier, literal, op), nil
