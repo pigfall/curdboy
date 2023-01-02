@@ -437,7 +437,7 @@ func(this *{{$filterVisitorName}})	VisitUnaryExpr(expr *{{$filterPkgName}}.Unary
 func {{$nodeName}}{{$field.StructField}}ValueFromInterface(v interface{})(value {{ template "fieldTypeStr" $field.Type.Type}},err error){
   {{$fieldTypeInGoTypeStr := $field.Type.Type.String }} // TODO sync with fieldTypeStr
   var ok bool
-  value,ok = v.({{ template "fieldTypeStr" $field.Type.Type}})
+  {{template "entFieldValueFromInterface" $field}}
   if !ok {
     err = fmt.Errorf("The type of The field <$field.Name> of node < {{$nodeName}}> is  {{$fieldTypeInGoTypeStr}}")
     return
@@ -447,6 +447,39 @@ func {{$nodeName}}{{$field.StructField}}ValueFromInterface(v interface{})(value 
 }
 {{ end }}
 // }
+
+{{define "entFieldValueFromInterfaceSwitch"}}
+  switch assertedV:=v.(type){
+  case int:
+    ok = true
+    value = {{.}}(assertedV)
+  case int32:
+    ok = true
+    value = {{.}}(assertedV)
+  case int64:
+    ok = true
+    value = {{.}}(assertedV)
+  case float32:
+    ok = true
+    value = {{.}}(assertedV)
+  case float64:
+    ok = true
+    value = {{.}}(assertedV)
+  }
+{{end}}
+
+{{define "entFieldValueFromInterface"}}
+  {{$field:=.}}
+  {{ if eq ($field.Type.String) "int32" }}
+    {{template "entFieldValueFromInterfaceSwitch" "int32"}}
+  {{ else if eq ($field.Type.String) "int64"}}
+    {{template "entFieldValueFromInterfaceSwitch" "int64"}}
+  {{ else if eq ($field.Type.String) "int"}}
+    {{template "entFieldValueFromInterfaceSwitch" "int"}}
+  {{ else if eq ($field.Type.String) "string"}}
+    value,ok = v.(string)
+  {{end}}
+{{end}}
 
 
 // { တ8 parse fields expr to field selector object which is used to select the field we want to query
