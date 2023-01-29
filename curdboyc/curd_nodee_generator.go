@@ -4,11 +4,12 @@ import (
 	"entgo.io/ent/entc/gen"
 
 	"fmt"
-	ent "github.com/pigfall/ent_utils"
 	"os"
 	"path"
 	"strings"
 	tpl "text/template"
+
+	ent "github.com/pigfall/ent_utils"
 )
 
 type CURDNodeGenerator struct {
@@ -47,9 +48,25 @@ func (this *CURDNodeGenerator) Generate() error {
 			first := strings.ToUpper(string(runes[0]))
 			return first + string(input[1:])
 		},
+		"error": func(format string, args ...interface{}) (struct{}, error) {
+			return struct{}{}, fmt.Errorf(format, args...)
+		},
+		"buildMap": func(kv ...interface{}) map[string]interface{} {
+			m := make(map[string]interface{})
+			for i := 0; i < len(kv); i += 2 {
+				m[kv[i].(string)] = kv[i+1]
+			}
+			return m
+		},
+		"capitalFirstLetter": func(input string) string {
+			capAll := strings.ToUpper(input)
+			tmp := []rune(input)
+			tmp[0] = []rune(capAll)[0]
+			return string(tmp)
+		},
 	}
 
-	tplIns, err := tpl.New("curd_node.tmpl").Funcs(tplFuncs).ParseFS(templates, "tpls/curd_node.tmpl")
+	tplIns, err := tpl.New("curd_node.tmpl").Funcs(tplFuncs).ParseFS(templates, "tpls/curd_node.tmpl", "tpls/_helper.tmpl")
 	if err != nil {
 		return fmt.Errorf("Failed to parse template of CURD_NODE: %w", err)
 	}

@@ -50,6 +50,11 @@ type {{$nodeName}} struct {
   {{- end }}
 }
 
+type {{$nodeName}}V2 struct{
+{{template "curdNodeGenerateFields" .TargetNode -}}
+{{template "curdNodeGenerateEdges" (buildMap "TargetNode" .TargetNode "AllNodes" $graph.Graph.Nodes) -}}
+}
+
 // 2တ
 func (this *{{$nodeName}}) fromEnt{{$nodeName}}(base *{{$entPkgName}}.{{$nodeName}},selector *{{$nodeName}}FieldsSelector)error{
   this.{{$nodeName}} = base

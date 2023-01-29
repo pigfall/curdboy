@@ -1,0 +1,48 @@
+{{/* 
+curdNodeGenerateFields
+curdNodeGenerateFieldType
+
+curdNodeGenerateEdges
+curdNodeGenerateEdgeType
+*/}}
+
+{{define "curdNodeGenerateFields"}}
+{{- $node:=. -}}
+{{- range $node.AllFldsIncludePK -}}
+{{- $field := . -}}
+{{$field.StructField}} {{template "curdNodeGenerateFieldType" $field}}
+{{ end }}
+{{- end -}}
+
+{{define "curdNodeGenerateFieldType"}}
+{{- $field:=. -}}
+{{- $fieldTypeStr :=$field.Type.String -}}
+{{- if eq $fieldTypeStr "string" -}}
+    string
+{{- else if eq $fieldTypeStr "int" -}}
+    int
+{{- else -}}
+    {{error "undefined field type" $fieldTypeStr }}
+{{- end -}} 
+{{end}}
+
+{{define "curdNodeGenerateEdges"}}
+{{- $targetNode:=.TargetNode -}}
+{{- $allNodes:=.AllNodes -}}
+{{- range $targetNode.Edges -}}{{/* range edges start*/}}
+{{- $edge:=. -}}
+{{ capitalFirstLetter $edge.Name }} {{template "curdNodeGenerateEdgeType" (buildMap ".targetNode" $targetNode "edge" $edge)}}
+{{- end -}}{{/*range edges end*/}}
+{{end}}
+
+{{define "curdNodeGenerateEdgeType"}}
+{{- $targetNode:=.targetNode -}}
+{{- $edge := .edge}}
+{{- $edgeRelTypeStr := $edge.Rel.Type.String -}}
+{{- if eq $edgeRelTypeStr "O2M" -}}
+[]*$edge.Type.Name
+{{- else if eq $edgeRelTypeStr "M2O" -}}
+{{- else -}}
+{{error "undefined edge relation type %" $edgeRelTypeStr }}
+{{end}}
+{{end}}
