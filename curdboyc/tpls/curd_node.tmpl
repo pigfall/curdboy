@@ -34,31 +34,35 @@ import(
 
 // { 
 // 1တ
-type {{$nodeName}} struct {
-  *{{$entPkgName}}.{{$nodeName}}
-  Edges interface{} `json:"-"` // no need the edges from base class
-  {{ range $graph.GetEdgesAlias $nodeName -}}
-  {{- $edgeAlias := . -}}
-  {{- $edge := $edgeAlias.To -}}
-  {{- $edgeNode := $edge.Type -}}
-  {{ if or (eq $edge.Rel.Type.String "O2O") (eq $edge.Rel.Type.String "M2O") -}}
-  {{ToFirstCharacterUpper $edgeAlias.Alias }} *{{$edgeNode.Name}} `json:"{{$edgeAlias.Alias}},omitempty"`
-  {{ else if or (eq $edge.Rel.Type.String "O2M") (eq $edge.Rel.Type.String "M2M") -}}
-  {{ToFirstCharacterUpper $edgeAlias.Alias }} []*{{$edgeNode.Name}} `json:"{{$edgeAlias.Alias}},omitempty"`
-  {{else -}}
-    generate error: undefined ent relation type: {{$edge.Rel.Type.String}}
-  {{- end }}
-  {{- end }}
-}
-
-type {{$nodeName}}V2 struct{
+type {{$nodeName}} struct{
 {{template "curdNodeGenerateFields" .TargetNode -}}
 {{template "curdNodeGenerateEdges" (buildMap "TargetNode" .TargetNode "AllNodes" $graph.Graph.Nodes) -}}
 }
 
 // 2တ
 func (this *{{$nodeName}}) fromEnt{{$nodeName}}(base *{{$entPkgName}}.{{$nodeName}},selector *{{$nodeName}}FieldsSelector)error{
-  this.{{$nodeName}} = base
+  {{ range .TargetNode.AllFldsIncludePK }}
+  {{$field:=.}}
+  this.{{$field.StructField}} = base.{{$field.StructField}}
+  {{end}}
+
+  {{ range .TargetNode.Edges }}
+  {{$edge:=.}}
+  {{$relation := $edge.Rel.Type.String }}
+  {{ if eq $relation "M2O"}}
+     if base.Edges.{{$edge.Type.Name}} != nil{
+         e := {{$edge.Type.Name}}{}
+         if err := e.fromEnt{{$edge.Type.Name}}(base.Edges.{{$edge.Type.Name}},nil);err != nil{
+          return err
+         }
+         this.{{ capitalFirstLetter $edge.Name }} = &e
+     }
+  {{else if eq $relation "O2M" }}
+    return fmt.Errorf("Unimpl O2M fromEnt edge query")
+  {{else}}
+    {{error "unhandled relation type `%s`" $relation }}
+  {{end}}
+  {{end}}
 
   {{- range $graph.GetEdgesAlias $nodeName -}}
   {{- $edgeAlias := . -}}
