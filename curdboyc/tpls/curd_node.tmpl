@@ -6,6 +6,7 @@ import(
 	{{ range .Imports -}}
 	"{{. -}}"
 	{{ end -}}
+  {{template "imports" .TargetNode -}}
 	"fmt"
 	"strings"
 )
@@ -205,11 +206,11 @@ func {{.GeneratedUpdateFuncName}} (ctx context.Context,entCli {{$entClientType}}
       return err
     }
     mutation.Set{{ $field.StructField }}(value)
-    {{ else -}}
+    {{ else }}
     case "{{$field.Name}}":
     err := fmt.Errorf("field {{$field.Name}} is auto generated, do not set value to the field")
     return err
-    {{- end}}
+    {{ end}}
     {{- end}}
     default:
       return fmt.Errorf("undefined field < %s > for node < {{$nodeName}} >",field)
@@ -425,6 +426,16 @@ func(this *{{$filterVisitorName}})	VisitUnaryExpr(expr *{{$filterPkgName}}.Unary
 						return nil,fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type not matched, expect number but get string")
 					}
 					return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(float64(expr.Right.GetNumberValue())),nil
+        {{- else if eq $field.Type.Type.String "time.Time" -}}
+          // The time value format is  yy-mm-dd hh:mm:ss 
+          if !expr.Right.IsString(){
+            return nil, fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type is time, the value format must be like: 1970-11-11 11:11:11")
+          }
+          t,err := sdktime.ParseFromYYYY_MM_DD_HH_MM_SS(expr.Right.GetStringValue());
+          if err != nil{
+            return nil, fmt.Errorf("failed to parse time '%s': %w",expr.Right.GetStringValue(),err)
+          }
+          return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(t), nil
 				{{- else -}}
 					Unexpected node.Field.Type {{$field.Type.Type.String}}
 				{{- end }}

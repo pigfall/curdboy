@@ -6,7 +6,7 @@ require (
 	entgo.io/ent v0.10.1
 	github.com/fatih/color v1.13.0
 	github.com/mitchellh/mapstructure v1.4.3
-	github.com/pigfall/ent_utils v0.0.2
+	github.com/pigfall/ent_utils v0.0.3
 	github.com/pigfall/gosdk v0.0.4
 	github.com/xlab/treeprint v1.1.0
 	golang.org/x/tools v0.1.9-0.20211216111533-8d383106f7e7

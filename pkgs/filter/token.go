@@ -34,6 +34,10 @@ func (this *Token) IsNumber() bool {
 	return this.Tpe == TokenType_Number
 }
 
+func (this *Token) IsString() bool {
+	return this.Tpe == TokenType_String
+}
+
 func (this *Token) GetNumberValue() float64 {
 	return this.Value.(float64)
 }

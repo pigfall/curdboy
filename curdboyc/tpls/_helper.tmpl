@@ -10,7 +10,7 @@ curdNodeGenerateEdgeType
 {{- $node:=. -}}
 {{- range $node.AllFldsIncludePK -}}
 {{- $field := . -}}
-{{$field.StructField}} {{template "curdNodeGenerateFieldType" $field}}
+{{$field.StructField}} {{template "curdNodeGenerateFieldType" $field}} `{{$field.StructTag}}`
 {{ end }}
 {{- end -}}
 
@@ -21,8 +21,12 @@ curdNodeGenerateEdgeType
     string
 {{- else if eq $fieldTypeStr "int" -}}
     int
+{{- else if eq $fieldTypeStr "time.Time" -}}
+    time.Time
+{{- else if eq $fieldTypeStr "float64" -}}
+    float64
 {{- else -}}
-    {{error "undefined field type" $fieldTypeStr }}
+    {{error "undefined field type %s" $fieldTypeStr }}
 {{- end -}} 
 {{end}}
 
@@ -31,8 +35,9 @@ curdNodeGenerateEdgeType
 {{- $allNodes:=.AllNodes -}}
 {{- range $targetNode.Edges -}}{{/* range edges start*/}}
 {{- $edge:=. -}}
-{{ capitalFirstLetter $edge.Name }} {{template "curdNodeGenerateEdgeType" (buildMap ".targetNode" $targetNode "edge" $edge)}}
-{{- end -}}{{/*range edges end*/}}
+{{ capitalFirstLetter $edge.Name }} {{template "curdNodeGenerateEdgeType" (buildMap ".targetNode" $targetNode "edge" $edge)}} `{{$edge.StructTag}}`
+
+{{ end -}}{{/*range edges end*/}}
 {{end}}
 
 {{define "curdNodeGenerateEdgeType"}}
@@ -40,9 +45,22 @@ curdNodeGenerateEdgeType
 {{- $edge := .edge}}
 {{- $edgeRelTypeStr := $edge.Rel.Type.String -}}
 {{- if eq $edgeRelTypeStr "O2M" -}}
-[]*$edge.Type.Name
+[]*{{$edge.Type.Name}}
 {{- else if eq $edgeRelTypeStr "M2O" -}}
+*{{$edge.Type.Name}}
 {{- else -}}
 {{error "undefined edge relation type %" $edgeRelTypeStr }}
+{{- end -}}
+{{end}}
+
+{{define "imports"}}
+{{- $node:=. -}}
+{{- range $node.AllFldsIncludePK -}}
+{{- $field := . -}}
+{{- $fieldTypeStr :=$field.Type.String -}}
+{{- if eq $fieldTypeStr "time.Time" -}}
+    "time"
+    sdktime "github.com/pigfall/gosdk/time"
+{{- end -}}
 {{end}}
 {{end}}

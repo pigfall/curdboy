@@ -45,8 +45,8 @@ github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 h1:DpOJ2HYzC
 github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7/go.mod h1:ZXFpozHsX6DPmq2I0TCekCxypsnAUbP2oI0UX1GXzOo=
 github.com/mitchellh/mapstructure v1.4.3 h1:OVowDSCllw/YjdLkam3/sm7wEtOy59d8ndGgCcyj8cs=
 github.com/mitchellh/mapstructure v1.4.3/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
-github.com/pigfall/ent_utils v0.0.2 h1:FoOtSVR3qlUu/SZA4jcqyjlv/4PVB1Xp1ZoLnOAYRsg=
-github.com/pigfall/ent_utils v0.0.2/go.mod h1:Y01UugmeEP4iHACkvnCjNF9sSetzZnDokTQB7hHxXzw=
+github.com/pigfall/ent_utils v0.0.3 h1:pyjs5Spk1ycP+2AAfuBA5JGu7KpI/xKbXnWzVW7YIFw=
+github.com/pigfall/ent_utils v0.0.3/go.mod h1:Y01UugmeEP4iHACkvnCjNF9sSetzZnDokTQB7hHxXzw=
 github.com/pigfall/gosdk v0.0.4 h1:l7CbkBRkYz5SeP24m/q2dp0Ybwpvm0uy6hGB3D2KRZ0=
 github.com/pigfall/gosdk v0.0.4/go.mod h1:NTOxuUV0V9PwiRfoS/CxXAnRIpYAgSJF/2hj8onueMY=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
