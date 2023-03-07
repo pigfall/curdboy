@@ -58,7 +58,19 @@ func (this *{{$nodeName}}) fromEnt{{$nodeName}}(base *{{$entPkgName}}.{{$nodeNam
          this.{{ capitalFirstLetter $edge.Name }} = &e
      }
   {{else if eq $relation "O2M" }}
-    return fmt.Errorf("Unimpl O2M fromEnt edge query")
+    {
+      if base.Edges.{{capitalFirstLetter $edge.Name}} != nil{
+        list := make([]*{{$edge.Type.Name}},0,len(base.Edges.{{capitalFirstLetter $edge.Name}}))
+        for _, v:= range base.Edges.{{capitalFirstLetter $edge.Name}}{
+          c := &{{$edge.Type.Name}}{}
+          if err := c.fromEnt{{$edge.Type.Name}}(v,nil);err != nil{
+            return err
+          }
+          list = append(list,c)
+        }
+        this.{{capitalFirstLetter $edge.Name}} = list
+      }
+    }
   {{else}}
     {{error "unhandled relation type `%s`" $relation }}
   {{end}}
@@ -131,6 +143,37 @@ func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]inte
     return
   }
   return record.{{.TargetNode.ID.StructField}},nil
+}
+
+func {{.GenerateCreateFuncName}}WithStruct (ctx context.Context,client *{{ $entPkgName }}.Client ,entity *{{$nodeName}})(id {{ template "fieldTypeStr" .TargetNode.ID.Type.Type }},outErr error){
+  mutation := client.{{ $nodeName }}.Create()
+    {{- range .TargetNode.AllFldsIncludePK -}}
+    {{- $field := . -}}
+    {{ if $field.UserDefined }}
+      mutation.Set{{ $field.StructField }}(entity.{{$field.StructField}})
+    {{- end -}}
+    {{- end }}
+
+    {{range .TargetNode.Edges}}
+      {{$edge := .}}
+      {{ if eq $edge.Rel.Type.String "M2O" }}
+        if entity.{{ capitalFirstLetter $edge.Name }} != nil{
+          mutation.Set{{capitalFirstLetter $edge.Name}}ID(entity.Channel.ID)
+        }
+      {{else}}
+        if entity.{{ capitalFirstLetter $edge.Name }} != nil{
+          outErr = fmt.Errorf("unimpl create with {{$edge.Rel.Type.String}} edge, node: {{$nodeName}},edge {{$edge.Name}}")
+          return
+        }
+      {{ end }}
+    {{end}}
+
+    record,err := mutation.Save(ctx)
+    if err != nil {
+      outErr = err
+      return
+    }
+    return record.{{.TargetNode.ID.StructField}},nil
 }
 
 // 4တ 
@@ -317,17 +360,33 @@ func(this *{{$filterVisitorName}})	VisitComparisionExpr(expr *{{$filterPkgName}}
 		case "{{$field.Name}}":
 			switch expr.Op.Tpe {
 				case {{$filterPkgName}}.TokenType_KW_Eq:
-					{{ template "generatePredicate" (buildGenPredicateParam $field "EQ")}}
+					  {{ template "generatePredicate" (buildGenPredicateParam $field "EQ")}}
 				case {{$filterPkgName}}.TokenType_KW_Ne:
 					{{ template "generatePredicate" (buildGenPredicateParam $field "NEQ")}}
 				case {{$filterPkgName}}.TokenType_KW_Lt:
-					{{ template "generatePredicate" (buildGenPredicateParam $field "LT")}}
+					{{- if eq $field.Type.Type.String "bool" -}}
+            return nil ,fmt.Errorf("field {{$field.StructField}} of node {{$nodeName}} is bool type, can not use `le` operator")
+          {{- else -}}
+					  {{ template "generatePredicate" (buildGenPredicateParam $field "LT")}}
+          {{- end }}
 				case {{$filterPkgName}}.TokenType_KW_Le:
-					{{ template "generatePredicate" (buildGenPredicateParam $field "LTE")}}
+					{{- if eq $field.Type.Type.String "bool" -}}
+            return nil ,fmt.Errorf("field {{$field.StructField}} of node {{$nodeName}} is bool type, can not use `le` operator")
+          {{- else -}}
+					  {{ template "generatePredicate" (buildGenPredicateParam $field "LTE")}}
+          {{- end }}
 				case {{$filterPkgName}}.TokenType_KW_Gt:
-					{{ template "generatePredicate" (buildGenPredicateParam $field "GT")}}
+					{{- if eq $field.Type.Type.String "bool" -}}
+            return nil ,fmt.Errorf("field {{$field.StructField}} of node {{$nodeName}} is bool type, can not use `gt` operator")
+          {{- else -}}
+					  {{ template "generatePredicate" (buildGenPredicateParam $field "GT")}}
+          {{- end }}
 				case {{$filterPkgName}}.TokenType_KW_Ge:
-					{{ template "generatePredicate" (buildGenPredicateParam $field "GTE")}}
+					{{- if eq $field.Type.Type.String "bool" -}}
+            return nil ,fmt.Errorf("field {{$field.StructField}} of node {{$nodeName}} is bool type, can not use `ge` operator")
+          {{- else -}}
+					  {{ template "generatePredicate" (buildGenPredicateParam $field "GTE")}}
+          {{- end }}
 				case {{$filterPkgName}}.TokenType_KW_Like:
 					{{- if eq $field.Type.Type.String "string" -}}
 					{{ template "generatePredicate" (buildGenPredicateParam $field "Contains")}}
@@ -440,6 +499,12 @@ func(this *{{$filterVisitorName}})	VisitUnaryExpr(expr *{{$filterPkgName}}.Unary
             return nil, fmt.Errorf("failed to parse time '%s': %w",expr.Right.GetStringValue(),err)
           }
           return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(t), nil
+        {{- else if eq $field.Type.Type.String "bool" -}}
+          if !expr.Right.IsString(){
+            return nil, fmt.Errorf("the field {{$field.Name}} of node {{$nodeName}} type must be bool")
+          }
+          b := expr.Right.GetStringValue() == "true"
+          return {{$nodePredicatePkgName}}.{{$field.StructField}}{{$op}}(b), nil
 				{{- else -}}
 					Unexpected node.Field.Type {{$field.Type.Type.String}}
 				{{- end }}
