@@ -21,7 +21,7 @@ import(
 
 /*{ the number is meanning less. I just use it as mark to jump between the code
 1တ   | struct {{$nodeName}}: as the model in db
-2တ   | func (*{{$nodeName}})fromEnt{{$nodeName}}: convert model in ent to curdboy node model
+2တ   | func (*{{$nodeName}})FromEnt{{$nodeName}}: convert model in ent to curdboy node model
 3တ   | func {{.GenerateCreateFuncName}}: func to create node
 4တ   | func {{.GeneratedQueryFuncName}}: func to query nodes by pages
 5တ   | func {{.GeneratedCountFuncName}}: func to count nodes
@@ -40,7 +40,7 @@ type {{$nodeName}} struct{
 }
 
 // 2တ
-func (this *{{$nodeName}}) fromEnt{{$nodeName}}(base *{{$entPkgName}}.{{$nodeName}},selector *{{$nodeName}}FieldsSelector)error{
+func (this *{{$nodeName}})FromEnt{{$nodeName}}(base *{{$entPkgName}}.{{$nodeName}},selector *{{$nodeName}}FieldsSelector)error{
   {{ range .TargetNode.AllFldsIncludePK }}
   {{$field:=.}}
   this.{{$field.StructField}} = base.{{$field.StructField}}
@@ -52,7 +52,7 @@ func (this *{{$nodeName}}) fromEnt{{$nodeName}}(base *{{$entPkgName}}.{{$nodeNam
   {{ if eq $relation "M2O"}}
      if base.Edges.{{$edge.Type.Name}} != nil{
          e := {{$edge.Type.Name}}{}
-         if err := e.fromEnt{{$edge.Type.Name}}(base.Edges.{{$edge.Type.Name}},nil);err != nil{
+         if err := e.FromEnt{{$edge.Type.Name}}(base.Edges.{{$edge.Type.Name}},nil);err != nil{
           return err
          }
          this.{{ capitalFirstLetter $edge.Name }} = &e
@@ -63,7 +63,7 @@ func (this *{{$nodeName}}) fromEnt{{$nodeName}}(base *{{$entPkgName}}.{{$nodeNam
         list := make([]*{{$edge.Type.Name}},0,len(base.Edges.{{capitalFirstLetter $edge.Name}}))
         for _, v:= range base.Edges.{{capitalFirstLetter $edge.Name}}{
           c := &{{$edge.Type.Name}}{}
-          if err := c.fromEnt{{$edge.Type.Name}}(v,nil);err != nil{
+          if err := c.FromEnt{{$edge.Type.Name}}(v,nil);err != nil{
             return err
           }
           list = append(list,c)
@@ -83,7 +83,7 @@ func (this *{{$nodeName}}) fromEnt{{$nodeName}}(base *{{$entPkgName}}.{{$nodeNam
   if selector.{{$edgeAlias.Alias}}Edges != nil{
     {{ if or (eq $edge.Rel.Type.String "O2O") (eq $edge.Rel.Type.String "M2O")}}
       edgeNode := &{{$edge.Type.Name}}{}
-      err := edgeNode.fromEnt{{$edge.Type.Name}}(base.Edges.{{ToFirstCharacterUpper $edge.Name}},selector.{{$edgeAlias.Alias}}Edges)
+      err := edgeNode.FromEnt{{$edge.Type.Name}}(base.Edges.{{ToFirstCharacterUpper $edge.Name}},selector.{{$edgeAlias.Alias}}Edges)
       if err != nil{
         return err
       }
@@ -92,7 +92,7 @@ func (this *{{$nodeName}}) fromEnt{{$nodeName}}(base *{{$entPkgName}}.{{$nodeNam
       edgeNodes := make([]*{{$edge.Type.Name}},0,len(base.Edges.{{ToFirstCharacterUpper $edge.Name}}))
       for _,v := range base.Edges.{{ToFirstCharacterUpper $edge.Name}}{
         edgeNode := &{{$edge.Type.Name}}{}
-        err := edgeNode.fromEnt{{$edge.Type.Name}}(v,selector.{{$edgeAlias.Alias}}Edges)
+        err := edgeNode.FromEnt{{$edge.Type.Name}}(v,selector.{{$edgeAlias.Alias}}Edges)
         if err != nil{
           return err
         }
@@ -176,6 +176,7 @@ func {{.GenerateCreateFuncName}}WithStruct (ctx context.Context,client *{{ $entP
     return record.{{.TargetNode.ID.StructField}},nil
 }
 
+
 // 4တ 
 func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Generated_QueryRequestStructName}},entCli {{$entClientType}})([]*{{$nodeName}},error ){
 	var pred {{$entPredicatePkgName}}.{{$nodeName}}
@@ -206,7 +207,7 @@ func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Genera
   nodes := make([]*{{$nodeName}},0,len(records))
   for _,r := range records{
     node := &{{$nodeName}}{}
-    err := node.fromEnt{{$nodeName}}(r,fldSelector)
+    err := node.FromEnt{{$nodeName}}(r,fldSelector)
     if err != nil{
       return nil,err
     }
