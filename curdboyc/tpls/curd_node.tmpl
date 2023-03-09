@@ -9,6 +9,7 @@ import(
   {{template "imports" .TargetNode -}}
 	"fmt"
 	"strings"
+  "errors"
 )
 
 {{ $entPkgName := .GlobalGraph.EntPkgName -}}
@@ -43,7 +44,11 @@ type {{$nodeName}} struct{
 func (this *{{$nodeName}})FromEnt{{$nodeName}}(base *{{$entPkgName}}.{{$nodeName}},selector *{{$nodeName}}FieldsSelector)error{
   {{ range .TargetNode.AllFldsIncludePK }}
   {{$field:=.}}
-  this.{{$field.StructField}} = base.{{$field.StructField}}
+    {{if eq $field.Type.String "time.Time"}}
+      this.{{$field.StructField}} = Time(base.{{$field.StructField}})
+    {{else}}
+      this.{{$field.StructField}} = base.{{$field.StructField}}
+    {{end}}
   {{end}}
 
   {{ range .TargetNode.Edges }}
@@ -139,6 +144,15 @@ func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]inte
   }
   record,err := mutation.Save(ctx)
   if err != nil {
+    var validateErr *{{$entPkgName}}.ValidationError
+    if errors.As(err, &validateErr){
+      outErr = &Error{
+        Code: ErrInvalidRequestParam,
+        Reason: "Invalid Request Param",
+        Message: err.Error(),
+      }
+      return
+    }
     outErr = err
     return
   }
@@ -150,7 +164,11 @@ func {{.GenerateCreateFuncName}}WithStruct (ctx context.Context,client *{{ $entP
     {{- range .TargetNode.AllFldsIncludePK -}}
     {{- $field := . -}}
     {{ if $field.UserDefined }}
-      mutation.Set{{ $field.StructField }}(entity.{{$field.StructField}})
+      {{if eq $field.Type.String "time.Time" }}
+        mutation.Set{{ $field.StructField }}(time.Time(entity.{{$field.StructField}}))
+      {{else}}
+        mutation.Set{{ $field.StructField }}(entity.{{$field.StructField}})
+      {{end}}
     {{- end -}}
     {{- end }}
 
@@ -170,6 +188,15 @@ func {{.GenerateCreateFuncName}}WithStruct (ctx context.Context,client *{{ $entP
 
     record,err := mutation.Save(ctx)
     if err != nil {
+      var validateErr *{{$entPkgName}}.ValidationError
+      if errors.As(err, &validateErr){
+        outErr = &Error{
+          Code: ErrInvalidRequestParam,
+          Reason: "Invalid Request Param",
+          Message: err.Error(),
+        }
+        return
+      }
       outErr = err
       return
     }
@@ -329,7 +356,11 @@ entity *{{$nodeName}},
   {{ $field := . -}}
   {{ if $field.UserDefined -}}
   {{ if not $field.Immutable }}
-    mutation.Set{{$field.StructField}}(entity.{{$field.StructField}})  
+    {{if eq $field.Type.String "time.Time" }}
+      mutation.Set{{$field.StructField}}(time.Time(entity.{{$field.StructField}}))  
+    {{else}}
+      mutation.Set{{$field.StructField}}(entity.{{$field.StructField}})  
+    {{end}}
   {{end}}
   {{ end }}
   {{- end}}

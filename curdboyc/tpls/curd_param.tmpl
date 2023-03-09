@@ -3,12 +3,18 @@
 package {{.GlobalGraph.GeneratedPkgName}}
 
 import(
+  "fmt"
   "net/http"
+  pigfallTime "github.com/pigfall/gosdk/time"
+  "time"
+  "strings"
 )
 
 const(
   ErrCodeOK = iota
+  ErrCodeInternalServerErr
   ErrCodeRecordExists
+  ErrInvalidRequestParam
 )
 
 type {{.GlobalGraph.Generated_QueryRequestStructName}} struct{
@@ -29,6 +35,10 @@ type Error struct{
   Message string `json:"message"`
 }
 
+func (e *Error) Error() string{
+  return fmt.Sprintf("%s: %s",e.Reason, e.Message)
+}
+
 func (e *Error) HTTPStatus()int{
   if e.Code ==  ErrCodeOK {
     return http.StatusOK
@@ -36,6 +46,25 @@ func (e *Error) HTTPStatus()int{
   if e.Code == ErrCodeRecordExists{
     return http.StatusConflict
   }
+  if e.Code == ErrInvalidRequestParam{
+    return http.StatusBadRequest
+  }
 
   return http.StatusInternalServerError
+}
+
+type Time time.Time
+
+func (t *Time) UnmarshalJSON(data []byte)(err error){
+  tim,err := pigfallTime.ParseFromYYYY_MM_DD_HH_MM_SS(strings.Trim(string(data),"\""))
+  if err != nil{
+    return err
+  }
+  *t = Time(tim)
+  return nil
+}
+
+func (t *Time) MarshalJSON()([]byte,error){
+  s := pigfallTime.FormatToYYYY_MM_DD_HH_MM_SS(time.Time(*t))
+  return []byte(fmt.Sprintf("\"%s\"",s)),nil
 }
