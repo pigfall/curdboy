@@ -2,6 +2,15 @@
 
 package {{.GlobalGraph.GeneratedPkgName}}
 
+import(
+  "net/http"
+)
+
+const(
+  ErrCodeOK = iota
+  ErrCodeRecordExists
+)
+
 type {{.GlobalGraph.Generated_QueryRequestStructName}} struct{
 	Filter string
   Fields string
@@ -18,4 +27,15 @@ type Error struct{
   Code int `json:"code"`
   Reason string `json:"reason"`
   Message string `json:"message"`
+}
+
+func (e *Error) HTTPStatus()int{
+  if e.Code ==  ErrCodeOK {
+    return http.StatusOK
+  }
+  if e.Code == ErrCodeRecordExists{
+    return http.StatusConflict
+  }
+
+  return http.StatusInternalServerError
 }

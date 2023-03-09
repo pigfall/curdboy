@@ -158,7 +158,7 @@ func {{.GenerateCreateFuncName}}WithStruct (ctx context.Context,client *{{ $entP
       {{$edge := .}}
       {{ if eq $edge.Rel.Type.String "M2O" }}
         if entity.{{ capitalFirstLetter $edge.Name }} != nil{
-          mutation.Set{{capitalFirstLetter $edge.Name}}ID(entity.Channel.ID)
+          mutation.Set{{capitalFirstLetter $edge.Name}}ID(entity.{{capitalFirstLetter $edge.Name}}.ID)
         }
       {{else}}
         if entity.{{ capitalFirstLetter $edge.Name }} != nil{
@@ -178,7 +178,7 @@ func {{.GenerateCreateFuncName}}WithStruct (ctx context.Context,client *{{ $entP
 
 
 // 4တ 
-func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Generated_QueryRequestStructName}},entCli {{$entClientType}})([]*{{$nodeName}},error ){
+func {{.GeneratedQueryFuncName}} (ctx context.Context,entCli {{$entClientType}} , req *{{.GlobalGraph.Generated_QueryRequestStructName}})([]*{{$nodeName}},error ){
 	var pred {{$entPredicatePkgName}}.{{$nodeName}}
 	if len(req.Filter) > 0{
     var err error
@@ -198,6 +198,50 @@ func {{.GeneratedQueryFuncName}} (ctx context.Context,req *{{.GlobalGraph.Genera
     return nil,err
   }
   // }
+
+	records,err :=  query.All(ctx)
+  if err != nil{
+    return nil,err
+  }
+  // { convert to our node struct
+  nodes := make([]*{{$nodeName}},0,len(records))
+  for _,r := range records{
+    node := &{{$nodeName}}{}
+    err := node.FromEnt{{$nodeName}}(r,fldSelector)
+    if err != nil{
+      return nil,err
+    }
+    nodes = append(nodes,node)
+  }
+  // }
+
+  return nodes,nil
+}
+
+func {{.GeneratedQueryFuncName}}WithOp (ctx context.Context,entCli {{$entClientType}} , req *{{.GlobalGraph.Generated_QueryRequestStructName}},op func(mutation *{{$entPkgName}}.{{$nodeName}}Query))([]*{{$nodeName}},error) {
+	var pred {{$entPredicatePkgName}}.{{$nodeName}}
+	if len(req.Filter) > 0{
+    var err error
+    pred,err = ParseFilterTo{{$nodeName}}Predicate(req.Filter)
+		if err != nil{
+			return nil,err
+		}
+	}
+	query := entCli.{{$nodeName}}.Query().Limit(req.PageSize).Offset(req.PageIndex * req.PageSize)
+	if pred != nil{
+		query = query.Where(pred)
+	}
+
+  // { fields selector
+  fldSelector,err := Parse{{$nodeName}}FieldsSelector(req.Fields)
+  if err != nil{
+    return nil,err
+  }
+  // }
+
+  if op != nil{
+    op(query)
+  }
 
 	records,err :=  query.All(ctx)
   if err != nil{
@@ -264,6 +308,39 @@ func {{.GeneratedUpdateFuncName}} (ctx context.Context,entCli {{$entClientType}}
       return fmt.Errorf("undefined field < %s > for node < {{$nodeName}} >",field)
     }
   }
+  _,err := mutation.Save(ctx)
+  return err
+}
+
+func {{.GeneratedUpdateFuncName}}WithStruct(
+ctx context.Context,
+client *{{$entPkgName}}.Client,
+id {{ template "fieldTypeStr" .TargetNode.ID.Type.Type }} ,
+entity *{{$nodeName}},
+)error{
+  mutation := client.{{$nodeName}}.Update()
+  mutation.Where({{$nodePredicatePkgName}}.IDEQ(id))
+
+  {{ range .TargetNode.AllFldsIncludePK -}}
+  {{ $field := . -}}
+  {{ if $field.UserDefined -}}
+  mutation.Set{{$field.StructField}}(entity.{{$field.StructField}})  
+  {{ end }}
+  {{- end}}
+
+  {{ range .TargetNode.Edges }}
+  {{ $edge := . }}
+  {{ if eq $edge.Rel.Type.String "M2O" }}
+  if entity.{{capitalFirstLetter $edge.Name}} == nil{
+    mutation.Clear{{capitalFirstLetter $edge.Name }}()
+  }else{
+    mutation.Set{{capitalFirstLetter $edge.Name }}ID(entity.{{capitalFirstLetter $edge.Name}}.ID)
+  }
+  {{ end }}
+  {{ end }}
+
+
+
   _,err := mutation.Save(ctx)
   return err
 }
