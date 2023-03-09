@@ -57,12 +57,18 @@ curdNodeGenerateEdgeType
 
 {{define "imports"}}
 {{- $node:=. -}}
+{{$map := buildMap}}
 {{- range $node.AllFldsIncludePK -}}
 {{- $field := . -}}
 {{- $fieldTypeStr :=$field.Type.String -}}
 {{- if eq $fieldTypeStr "time.Time" -}}
-    "time"
-    sdktime "github.com/pigfall/gosdk/time"
+    {{if index $map "time.Time" }}
+
+    {{else}}
+        "time"
+        sdktime "github.com/pigfall/gosdk/time"
+        {{ $map = setMap $map "time.Time" true}}
+    {{ end }}
 {{- end -}}
 {{end}}
 {{end}}

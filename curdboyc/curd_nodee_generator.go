@@ -58,6 +58,10 @@ func (this *CURDNodeGenerator) Generate() error {
 			}
 			return m
 		},
+		"setMap": func(m map[string]interface{}, k string, v any) map[string]interface{} {
+			m[k] = v
+			return m
+		},
 		"capitalFirstLetter": func(input string) string {
 			capAll := strings.ToUpper(input)
 			tmp := []rune(input)

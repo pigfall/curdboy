@@ -291,13 +291,17 @@ func {{.GeneratedUpdateFuncName}} (ctx context.Context,entCli {{$entClientType}}
     {{ range .TargetNode.AllFldsIncludePK -}}
     {{ $field := . -}}
     {{ if $field.UserDefined -}}
-    case "{{$field.Name}}":
-    value,err := {{$nodeName}}{{$field.StructField}}ValueFromInterface(v)
-    if err != nil {
-      err = fmt.Errorf("field {{$field.Name}} type not match for node {{$nodeName}}: %w",err)
-      return err
-    }
-    mutation.Set{{ $field.StructField }}(value)
+      case "{{$field.Name}}":
+      {{if not $field.Immutable}}
+        value,err := {{$nodeName}}{{$field.StructField}}ValueFromInterface(v)
+        if err != nil {
+          err = fmt.Errorf("field {{$field.Name}} type not match for node {{$nodeName}}: %w",err)
+          return err
+        }
+        mutation.Set{{ $field.StructField }}(value)
+      {{else}}
+      return fmt.Errorf("field {{$field.Name}} is immutable")
+      {{end}}
     {{ else }}
     case "{{$field.Name}}":
     err := fmt.Errorf("field {{$field.Name}} is auto generated, do not set value to the field")
@@ -324,7 +328,9 @@ entity *{{$nodeName}},
   {{ range .TargetNode.AllFldsIncludePK -}}
   {{ $field := . -}}
   {{ if $field.UserDefined -}}
-  mutation.Set{{$field.StructField}}(entity.{{$field.StructField}})  
+  {{ if not $field.Immutable }}
+    mutation.Set{{$field.StructField}}(entity.{{$field.StructField}})  
+  {{end}}
   {{ end }}
   {{- end}}
 
