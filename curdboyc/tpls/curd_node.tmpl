@@ -470,7 +470,7 @@ func(this *{{$filterVisitorName}})	VisitComparisionExpr(expr *{{$filterPkgName}}
 	if len(paths) == 1{
 		var field = paths[0]
 		switch field {
-		{{ range .TargetNode.AllFldsExlucdePK}}
+		{{ range .TargetNode.AllFldsIncludePK}}
 		{{ $field := . }}
 		case "{{$field.Name}}":
 			switch expr.Op.Tpe {
