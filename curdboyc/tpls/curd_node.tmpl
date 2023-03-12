@@ -448,7 +448,8 @@ entity *{{$nodeName}},
       if fieldName == ""{
         return err
       }
-       return fmt.Errorf("%s has been used", fieldName)
+      // TODO: remove chinese.
+       return fmt.Errorf("%s 重复", fieldName)
     }
   }
   return err
