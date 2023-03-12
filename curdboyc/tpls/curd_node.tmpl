@@ -2,6 +2,8 @@
 
 package {{.GlobalGraph.GeneratedPkgName}}
 
+{{$globalGraph := .GlobalGraph}}
+
 import(
 	{{ range .Imports -}}
 	"{{. -}}"
@@ -10,15 +12,32 @@ import(
 	"fmt"
 	"strings"
   "errors"
+  "entgo.io/ent/dialect/sql/sqlgraph"
+  {{if gt (len .TargetNode.Edges) 0}}
+  "strconv"
+  {{end}}
+
+  {{range .TargetNode.Edges}}
+    {{$edge:=.}}
+      "{{$globalGraph.EntPkgPath}}/{{toLower $edge.Type.Name}}"
+  {{end}}
 )
 
 {{ $entPkgName := .GlobalGraph.EntPkgName -}}
 {{ $graph := .GlobalGraph -}}
 {{ $nodeName := .TargetNode.Name -}}
+{{$node := .TargetNode}}
 {{ $filterPkgName := "filter" -}}
 {{ $entPredicatePkgName := "predicate" -}}
 {{ $nodePredicatePkgName := .EntNodePredicatePkgName -}}
 {{ $entClientType := printf "*%s.%s" $entPkgName "Client" -}}
+
+var {{$nodeName}}FieldMap = map[string]string{
+{{range .TargetNode.Fields }}
+  {{$field :=.}}
+  "{{$field.Name}}": "{{$field.Comment}}",
+{{end}}
+}
 
 /*{ the number is meanning less. I just use it as mark to jump between the code
 1တ   | struct {{$nodeName}}: as the model in db
@@ -152,6 +171,10 @@ func {{.GenerateCreateFuncName}} (ctx context.Context,fieldsData map[string]inte
         Message: err.Error(),
       }
       return
+    }else if sqlgraph.IsUniqueConstraintError(err){
+      elems := strings.Split(err.Error(),"'")
+      outErr = fmt.Errorf("%s", elems[len(elems)-2])
+      return
     }
     outErr = err
     return
@@ -188,6 +211,7 @@ func {{.GenerateCreateFuncName}}WithStruct (ctx context.Context,client *{{ $entP
 
     record,err := mutation.Save(ctx)
     if err != nil {
+      outErr = err
       var validateErr *{{$entPkgName}}.ValidationError
       if errors.As(err, &validateErr){
         outErr = &Error{
@@ -195,6 +219,20 @@ func {{.GenerateCreateFuncName}}WithStruct (ctx context.Context,client *{{ $entP
           Reason: "Invalid Request Param",
           Message: err.Error(),
         }
+        return
+      }else if sqlgraph.IsUniqueConstraintError(err){
+        elems := strings.Split(err.Error(),"'")
+        if len(elems) < 2 {
+           outErr = err
+           return 
+        }
+        tableField := elems[len(elems)-2]
+        fieldName := {{$nodeName}}FieldMap[strings.SplitN(tableField,".",2)[1]]
+        if fieldName == ""{
+          outErr = err
+          return
+        }
+        outErr =  fmt.Errorf("%s 重复", fieldName)
         return
       }
       outErr = err
@@ -340,6 +378,19 @@ func {{.GeneratedUpdateFuncName}} (ctx context.Context,entCli {{$entClientType}}
     }
   }
   _,err := mutation.Save(ctx)
+  if err != nil {
+    var validateErr *{{$entPkgName}}.ValidationError
+    if errors.As(err, &validateErr){
+      return &Error{
+        Code: ErrInvalidRequestParam,
+        Reason: "Invalid Request Param",
+        Message: err.Error(),
+      }
+    }else if sqlgraph.IsUniqueConstraintError(err){
+      elems := strings.Split(err.Error(),"'")
+      return fmt.Errorf("%s", elems[len(elems)-2])
+    }
+  }
   return err
 }
 
@@ -379,6 +430,27 @@ entity *{{$nodeName}},
 
 
   _,err := mutation.Save(ctx)
+  if err != nil {
+    var validateErr *{{$entPkgName}}.ValidationError
+    if errors.As(err, &validateErr){
+      return &Error{
+        Code: ErrInvalidRequestParam,
+        Reason: "Invalid Request Param",
+        Message: err.Error(),
+      }
+    }else if sqlgraph.IsUniqueConstraintError(err){
+      elems := strings.Split(err.Error(),"'")
+      if len(elems) < 2 {
+        return err
+      }
+      tableField := elems[len(elems)-2]
+      fieldName := {{$nodeName}}FieldMap[strings.SplitN(tableField,".",2)[1]]
+      if fieldName == ""{
+        return err
+      }
+       return fmt.Errorf("%s has been used", fieldName)
+    }
+  }
   return err
 }
 
@@ -516,28 +588,28 @@ func(this *{{$filterVisitorName}})	VisitComparisionExpr(expr *{{$filterPkgName}}
 			return nil, fmt.Errorf("undefined field < %s > for node < %s >",field,"{{$nodeName}}")
 		}
 	}else{ // filter for edge alias
-    edge := paths[0]
-    // check if edge alias exists
-    switch edge{
-    {{ range $graph.GetEdgesAlias $nodeName -}}
-    {{$edgeAlias := .}}
-    case "{{$edgeAlias.Alias}}": // find the matched node by the edge alias
-      p,err := ParseFilterTo{{$edgeAlias.To.Type.Name}}Predicate(
-        fmt.Sprintf(
-          "%s %s %s",
-          strings.Join(paths[1:],"."),
-          expr.Op.Literal,
-          expr.Right.Literal,
-        ),
-      )
-      if err != nil{
-        return nil,err
-      }
-      return {{$nodePredicatePkgName}}.Has{{ ToFirstCharacterUpper $edgeAlias.To.Name }}With(p), nil
-    {{end}}
-    default:
-      return nil,fmt.Errorf("undefined edge alis < %s > for node < {{$nodeName}}>",edge)
-    }
+  // TODO
+  edgeName := paths[0]
+  switch edgeName{
+  {{range $node.Edges}}
+    {{$edge:=.}}
+    case "{{$edge.Name}}":
+          var  value int64 = 0
+          if expr.Right.IsNumber(){
+            value  = int64(expr.Right.GetNumberValue())
+          }else{
+            s := expr.Right.GetStringValue()
+            v,err := strconv.ParseInt(s,10,64)
+            if err != nil{
+              return nil, fmt.Errorf("Edge %s type is int", edgeName)
+            }
+            value = v
+          }
+            return {{$nodePredicatePkgName}}.Has{{capitalFirstLetter $edge.Name}}With({{toLower $edge.Type.Name}}.IDEQ(int(value))),nil
+  {{end}}
+    default: 
+    return nil, fmt.Errorf("Undefined edge %s",edgeName)
+  }
 	}
 }
 

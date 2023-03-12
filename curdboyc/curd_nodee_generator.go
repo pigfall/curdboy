@@ -68,6 +68,9 @@ func (this *CURDNodeGenerator) Generate() error {
 			tmp[0] = []rune(capAll)[0]
 			return string(tmp)
 		},
+		"toLower": func(input string)string{
+			return strings.ToLower(input)
+		},
 	}
 
 	tplIns, err := tpl.New("curd_node.tmpl").Funcs(tplFuncs).ParseFS(templates, "tpls/curd_node.tmpl", "tpls/_helper.tmpl")
